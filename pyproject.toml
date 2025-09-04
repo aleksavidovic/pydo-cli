@@ -1,0 +1,42 @@
+# This file defines project metadata, dependencies, and build configuration.
+# It's the modern standard, replacing setup.py, setup.cfg, and requirements.txt.
+
+[build-system]
+# Specifies the tools needed to build your package.
+# setuptools is a standard and safe choice.
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# Core project metadata (PEP 621).
+name = "pydo"
+version = "0.1.0"
+authors = [
+  { name="Aleksa Vidovic", email="you@example.com" },
+]
+description = "A sample Python command-line tool."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+# Project dependencies go here.
+# These are the packages your tool needs to run.
+dependencies = [
+  # "requests", # Example: uncomment to add a dependency
+  # "rich",     # Example: a great library for beautiful CLI output
+]
+
+[project.urls]
+"Homepage" = "https://github.com/your-username/my-cli-tool"
+"Bug Tracker" = "https://github.com/your-username/my-cli-tool/issues"
+
+
+# This section is the magic for creating the command-line tool.
+# It tells pip to create an executable script.
+[project.scripts]
+# "command-name" = "path.to.python.module:function_to_run"
+pydo = "pydo.main:run"
