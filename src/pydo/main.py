@@ -1,38 +1,9 @@
+import pdb
+import uuid
+import json
 import argparse
 import sys
 from pathlib import Path
-
-class Backend:
-    def __init__(self, is_global, path=None):
-        self.is_global = is_global
-        self.list_path = path
-        print(f"DEBUG: Backend initialized for {'global' if is_global else 'local'} list at {path}")
-
-    def init_list(self):
-        print("BACKEND: Initializing new list...")
-    
-    def add_task(self, description):
-        print(f"BACKEND: Adding task '{description}'")
-
-    def list_tasks(self, show_all=False, show_done=False):
-        print(f"BACKEND: Listing tasks (all={show_all}, done={show_done})")
-        print("  [1] [ ] Task one from backend")
-        print("  [2] [x] Task two from backend")
-
-    def complete_tasks(self, task_ids):
-        print(f"BACKEND: Completing tasks {task_ids}")
-
-    def uncomplete_tasks(self, task_ids):
-        print(f"BACKEND: Un-completing tasks {task_ids}")
-
-    def edit_task(self, task_id, new_description):
-        print(f"BACKEND: Editing task {task_id} to '{new_description}'")
-
-    def remove_tasks(self, task_ids, force=False):
-        print(f"BACKEND: Removing tasks {task_ids} (force={force})")
-
-    def clear_completed(self, force=False):
-        print(f"BACKEND: Clearing completed tasks (force={force})")
 
 # --- Context Resolution ---
 
@@ -43,10 +14,13 @@ def find_local_list_path():
     """
     current_dir = Path.cwd()
     while current_dir != current_dir.parent:
-        if (current_dir / ".pydo").exists():
-            return (current_dir / ".pydo")
+        if (current_dir / ".pydo" / "tasks.json").exists():
+            return (current_dir / ".pydo" / "tasks.json")
         current_dir = current_dir.parent
     return None
+
+def get_global_list_path():
+    return Path.home() / ".pydo" / "tasks.json"
 
 def get_backend():
     """
@@ -61,43 +35,104 @@ def get_backend():
     # You need to define where your global list is stored
     global_path = Path.home() / ".pydo_global"
     return Backend(is_global=True, path=global_path)
+"""
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "description": "Set up the database schema",
+      "completed": false
+    },
+    {
+      "id": "f9e8d7c6-b5a4-4f3e-2d1c-0b9a8f7e6d5c",
+      "description": "Write API documentation",
+      "completed": false
+    }
+  ]
+}
+"""
+# --- Helper Functions (Save / Load) ---
+def save_tasks(path: Path, data: dict):
+    with path.open('w') as f:
+        json.dump(data, f, indent=2)
 
+def load_tasks(path: Path):
+    if not path.exists():
+        return {"schema_version": 1, "tasks": []}
+    with path.open('r') as f:
+        return json.load(f)
+
+def print_tasks(tasks, show_all=False, show_done=True):
+    print(f"Listing tasks (all={show_all}, done={show_done})")
+    print("ID  Status  Description")
+    print("--  ------  -----------")
+    for display_id, task in enumerate(tasks, 1):
+        status = "[x]" if task['completed'] else "[ ]"
+        print(f"{display_id:<3} {status:<7} {task['description']}")
 
 # --- CLI Command Handlers ---
 
 def handle_init(args):
-    # This command ONLY works locally.
-    args_dict = vars(args)
-    path = ".pydo"
-    if args_dict["global"] == True:
-        path = Path.home() / path
-    try:
-        with open(path, "x") as file:
-            file.write("pydo init file")
-        if (1):
-            print(f"✅ Global pydo list initialized in {Path.cwd()}")
-        else:
-            print(f"✅ Local pydo list initialized in {Path.cwd()}")
-    except FileExistsError:
-        print(f"'{path}' file already exists in {Path.cwd / path}")
+    current_dir = Path.cwd()
+    pydo_dir = current_dir / ".pydo"
+    tasks_file = pydo_dir / "tasks.json"
+
+    if tasks_file.is_file():
+        print(f"pydo already initialized in {current_dir}")
+        return
+
+    print(f"Creating pydo directory at {pydo_dir}...")
+    pydo_dir.mkdir(exist_ok=True)
+
+    initial_data = {
+        "schema_version": 1,
+        "tasks": []
+    }
+    
+    print(f"Creating tasks file at {tasks_file}...")
+    tasks_file.write_text(json.dumps(initial_data, indent=2))
+    
+    print(f"🎉 Successfully initialized pydo list in {current_dir}")
                 
 
 def handle_status(args):
     # This command also ignores the --global flag
     local_path = find_local_list_path()
-    if local_path:
+    if local_path == Path.home() / ".pydo":
+        print("- Active list: Global")
+        return
+    if local_path and (local_path != Path.home()):
         print(f"- Active list: Local ({local_path.parent})")
     else:
         print("- Active list: Global")
 
 def handle_list(args):
-    backend = args.backend
-    backend.list_tasks(show_all=args.all, show_done=args.done)
+    path = find_local_list_path()
+    if path is not None:
+        data = load_tasks(path)
+        print_tasks(data["tasks"], show_all=args.all, show_done=args.done)
+    else:
+        print(f"Task loading failed. Are you sure pydo is initialized here ({path})?")
 
 def handle_add(args):
-    backend = args.backend
+    path = find_local_list_path()
+    if path == None:
+        path = get_global_list_path()
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        print(f"Task creation failed. Are you sure pydo is initialized here ({path})?")
+        return
     description = " ".join(args.description)
-    backend.add_task(description)
+    new_task = {
+            "id": str(uuid.uuid4()),
+            "description": description,
+            "completed": False
+    }
+    data["tasks"].append(new_task)
+    save_tasks(path, data)
 
 def handle_done(args):
     backend = args.backend
@@ -187,14 +222,16 @@ def run():
     args = parser.parse_args(sys.argv[1:])
     # Centrally decide which backend to use based on the --global flag
     # and attach it to the args object for handlers to use.
+    """
     if 'func' in args and args.command not in ['init', 'status']:
-        if args.glob:
+        if args.global:
              # User explicitly asked for global
             global_path = Path.home() / ".pydo_global"
             args.backend = Backend(is_global=True, path=global_path)
         else:
             # Default behavior: local-first
             args.backend = get_backend()
+    """
     
     args.func(args)
 
