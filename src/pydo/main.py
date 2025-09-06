@@ -67,13 +67,20 @@ def get_backend():
 
 def handle_init(args):
     # This command ONLY works locally.
-    if (Path.cwd() / ".pydo").exists():
-        print(f"Local pydo list already exists in {Path.cwd()}")
-        return
-    
-    backend = Backend(is_global=False, path=Path.cwd() / ".pydo")
-    backend.init_list()
-    print(f"✅ Local pydo list initialized in {Path.cwd()}")
+    args_dict = vars(args)
+    path = ".pydo"
+    if args_dict["global"] == True:
+        path = Path.home() / path
+    try:
+        with open(path, "x") as file:
+            file.write("pydo init file")
+        if (1):
+            print(f"✅ Global pydo list initialized in {Path.cwd()}")
+        else:
+            print(f"✅ Local pydo list initialized in {Path.cwd()}")
+    except FileExistsError:
+        print(f"'{path}' file already exists in {Path.cwd / path}")
+                
 
 def handle_status(args):
     # This command also ignores the --global flag
@@ -178,7 +185,6 @@ def run():
 
     # --- Execution ---
     args = parser.parse_args(sys.argv[1:])
-
     # Centrally decide which backend to use based on the --global flag
     # and attach it to the args object for handlers to use.
     if 'func' in args and args.command not in ['init', 'status']:
