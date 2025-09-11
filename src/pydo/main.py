@@ -11,7 +11,6 @@ from pydo import console
 from pydo.art import run_init_animation
 
 # --- Context Resolution ---
-
 def find_local_list_path():
     """
     Traverse up from the current directory to find a '.pydo' file/directory.
@@ -149,7 +148,7 @@ def handle_done(args):
             task["completed"] = True
             tasks_completed_count += 1
         
-        console.print(f"✅ [strike dim green]{task['description']}[/strike dim green]")
+        console.print(f"✅[strike dim green]{task['description']}[/strike dim green]")
 
     # 3. Save the data back to the file if changes were made
     if tasks_completed_count > 0:
@@ -171,6 +170,7 @@ def handle_undone(args):
     if len(data["tasks"]) == 0:
         console.print("No tasks in the current list. Create one by using `pydo add`.")
         return
+    
     # 2. go through the list of ids and mark undone
     tasks_uncompleted_count = 0
     for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
@@ -201,20 +201,13 @@ def handle_undone(args):
              console.print("\n[bold green]Task back in todo. Go get it![/bold green]")
 
 def handle_edit(args):
-    backend = args.backend
-    new_description = " ".join(args.new_description)
-    backend.edit_task(args.task_id, new_description)
-
+    console.print("[bold red]Edit function not implemented yet.[/bold red]")
 
 def handle_remove(args):
-    backend = args.backend
-    backend.remove_tasks(args.task_ids, force=args.force)
-
+    console.print("[bold red]Remove function not implemented yet.[/bold red]")
 
 def handle_clear(args):
-    backend = args.backend
-    backend.clear_completed(force=args.force)
-
+    console.print("[bold red]Clear function not implemented yet.[/bold red]")
 
 # --- Main Entry Point & Argument Parsing ---
 def run():
@@ -314,19 +307,7 @@ def run():
 
     # --- Execution ---
     args = parser.parse_args(sys.argv[1:])
-
-    # Incomplete backend logic from the original file
-    """
-    if 'func' in args and args.command not in ['init', 'status']:
-        if args.global:
-             # User explicitly asked for global
-            global_path = Path.home() / ".pydo_global"
-            args.backend = Backend(is_global=True, path=global_path)
-        else:
-            # Default behavior: local-first
-            args.backend = get_backend()
-    """
-
+    
     if hasattr(args, "func"):
         args.func(args)
 
