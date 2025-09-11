@@ -1,3 +1,4 @@
+import time
 import argparse
 import json
 import sys
@@ -113,6 +114,7 @@ def handle_add(args):
     new_task = {"id": str(uuid.uuid4()), "description": description, "completed": False}
     data["tasks"].append(new_task)
     save_tasks(path, data)
+    console.print(f"✅ Added: '[yellow]{description}[/yellow]' to your [blue]local[/blue] list.")
 
 
 def handle_done(args):
@@ -127,19 +129,76 @@ def handle_done(args):
     if len(data["tasks"]) == 0:
         console.print("No tasks in the current list. Create one by using `pydo add`.")
         return
-    # 2. For args.??? toggle done field in the data
-    for task_id in args.task_ids:
-        if (task_id - 1) < 0 or task_id > len(data["tasks"]):
-            continue
-        data["tasks"][task_id - 1]["completed"] = True
-    # 3. Save the data
-    save_tasks(path, data)
 
+    tasks_completed_count = 0
+    # 2. For args.task_ids, find task, animate completion, and update state
+    for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
+        if (task_id - 1) < 0 or task_id > len(data["tasks"]):
+            console.print(f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping.")
+            continue
+        
+        task = data["tasks"][task_id - 1]
+
+        if task["completed"]:
+            console.print(f"Task {task_id}: '[yellow]{task['description']}[/yellow]' is already done.")
+            continue
+
+        with console.status(f"[bold green]Completing task {task_id}...", spinner="dots"):
+            # This sleep makes the animation feel more deliberate
+            time.sleep(0.7)
+            task["completed"] = True
+            tasks_completed_count += 1
+        
+        console.print(f"✅ [strike dim green]{task['description']}[/strike dim green]")
+
+    # 3. Save the data back to the file if changes were made
+    if tasks_completed_count > 0:
+        save_tasks(path, data)
+        if tasks_completed_count > 1:
+             console.print(f"\n[bold green]Nice work! You've completed {tasks_completed_count} tasks. 🎉[/bold green]")
+        else:
+             console.print("\n[bold green]Nice work! 🎉[/bold green]")
 
 def handle_undone(args):
-    backend = args.backend
-    backend.uncomplete_tasks(args.task_ids)
+    # 1. Load tasks
+    path = find_local_list_path()
+    if not path:
+        console.print(
+            "No local pydo list found. Use `pydo init` to create one in the current directory."
+        )
+        return
+    data = load_tasks(path)
+    if len(data["tasks"]) == 0:
+        console.print("No tasks in the current list. Create one by using `pydo add`.")
+        return
+    # 2. go through the list of ids and mark undone
+    tasks_uncompleted_count = 0
+    for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
+        if (task_id - 1) < 0 or task_id > len(data["tasks"]):
+            console.print(f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping.")
+            continue
+        
+        task = data["tasks"][task_id - 1]
 
+        if not task["completed"]:
+            console.print(f"Task {task_id}: '[yellow]{task['description']}[/yellow]' is already not completed.")
+            continue
+
+        with console.status(f"[bold yellow]Reverting task status {task_id}...", spinner="dots"):
+            # This sleep makes the animation feel more deliberate
+            time.sleep(0.7)
+            task["completed"] = False
+            tasks_uncompleted_count += 1
+        
+        console.print(f"[strike dim yellow]{task['description']}[/strike dim yellow]")
+        # 3. Save file and report progress
+
+    if tasks_uncompleted_count > 0:
+        save_tasks(path, data)
+        if tasks_uncompleted_count > 1:
+             console.print(f"\n[bold yellow]You've changed {tasks_uncompleted_count} tasks back to not complete. Go get them! [/bold yellow]")
+        else:
+             console.print("\n[bold green]Task back in todo. Go get it![/bold green]")
 
 def handle_edit(args):
     backend = args.backend
