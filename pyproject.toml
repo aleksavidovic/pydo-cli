@@ -26,8 +26,8 @@ classifiers = [
 # Project dependencies go here.
 # These are the packages your tool needs to run.
 dependencies = [
-  # "requests", # Example: uncomment to add a dependency
-  # "rich",     # Example: a great library for beautiful CLI output
+  "rich",
+  "ruff (>=0.13.0,<0.14.0)",
 ]
 
 [project.urls]
@@ -40,3 +40,17 @@ dependencies = [
 [project.scripts]
 # "command-name" = "path.to.python.module:function_to_run"
 pydo = "pydo.main:run"
+
+
+# Optional: Configure development tools like linters and formatters.
+# This example uses ruff, a fast and popular choice.
+[tool.ruff]
+line-length = 88
+lint.select = ["E", "F", "W", "I"] # E=pycodestyle errors, F=pyflakes, W=pycodestyle warnings, I=isort
+lint.ignore = ["E501"] # Ignore "line too long" as it's handled by the formatter.
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
