@@ -16,7 +16,7 @@ authors = [
 ]
 description = "A sample Python command-line tool."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -28,6 +28,7 @@ classifiers = [
 dependencies = [
   "rich",
   "ruff (>=0.13.0,<0.14.0)",
+  "pyfiglet (>=1.0.4,<2.0.0)",
 ]
 
 [project.urls]

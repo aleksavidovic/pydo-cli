@@ -7,6 +7,7 @@ from pathlib import Path
 from rich.table import Table
 
 from pydo import console
+from pydo.art import run_init_animation
 
 # --- Context Resolution ---
 
@@ -60,6 +61,7 @@ def handle_init(args):
     if tasks_file.is_file():
         console.print(f"pydo already initialized in {current_dir}")
         return
+    run_init_animation()
 
     console.print(f"Creating pydo directory at {pydo_dir}...")
     pydo_dir.mkdir(exist_ok=True)
