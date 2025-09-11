@@ -1,3 +1,4 @@
+import pdb
 import time
 import argparse
 import json
@@ -74,8 +75,7 @@ def handle_init(args):
     console.print(f"🎉 Successfully initialized pydo list in {current_dir}")
 
 
-def handle_status(args):
-    # This command also ignores the --global flag
+def handle_status(args): 
     local_path = find_local_list_path()
     if local_path == Path.home() / ".pydo":
         console.print("- Active list: Global")
@@ -117,7 +117,6 @@ def handle_add(args):
 
 
 def handle_done(args):
-    # 1. Load tasks
     path = find_local_list_path()
     if not path:
         console.print(
@@ -130,7 +129,7 @@ def handle_done(args):
         return
 
     tasks_completed_count = 0
-    # 2. For args.task_ids, find task, animate completion, and update state
+
     for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
         if (task_id - 1) < 0 or task_id > len(data["tasks"]):
             console.print(f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping.")
@@ -156,7 +155,7 @@ def handle_done(args):
         if tasks_completed_count > 1:
              console.print(f"\n[bold green]Nice work! You've completed {tasks_completed_count} tasks. 🎉[/bold green]")
         else:
-             console.print("\n[bold green]Nice work! 🎉[/bold green]")
+             console.print("[bold green]Nice work! 🎉[/bold green]")
 
 def handle_undone(args):
     # 1. Load tasks
@@ -198,16 +197,72 @@ def handle_undone(args):
         if tasks_uncompleted_count > 1:
              console.print(f"\n[bold yellow]You've changed {tasks_uncompleted_count} tasks back to not complete. Go get them! [/bold yellow]")
         else:
-             console.print("\n[bold green]Task back in todo. Go get it![/bold green]")
+             console.print("[bold green]Task back in todo. Go get it![/bold green]")
 
 def handle_edit(args):
     console.print("[bold red]Edit function not implemented yet.[/bold red]")
 
 def handle_remove(args):
-    console.print("[bold red]Remove function not implemented yet.[/bold red]")
+    path = find_local_list_path()
+    if not path:
+        console.print(
+            "No local pydo list found. Use `pydo init` to create one in the current directory."
+        )
+        return
+    data = load_tasks(path)
+    if len(data["tasks"]) == 0:
+        console.print("No tasks in the current list. Create one by using `pydo add`.")
+        return
+    
+    tasks_deleted_count = 0
+    for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
+        if (task_id - 1) < 0 or task_id > len(data["tasks"]):
+            console.print(f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping.")
+            continue
+        
+
+        with console.status(f"[bold yellow]Removing task [strike dim green]{task_id}[/]...", spinner="dots"):
+            # This sleep makes the animation feel more deliberate
+            time.sleep(0.7)
+
+            del(data["tasks"][task_id - 1])
+            tasks_deleted_count += 1
+
+    if tasks_deleted_count > 0:
+        save_tasks(path, data)
+        if tasks_deleted_count > 1:
+             console.print(f"\n[bold yellow]You've deleted {tasks_deleted_count} tasks. [/bold yellow]")
+        else:
+             console.print("[bold green]Task deleted.[/bold green]")
 
 def handle_clear(args):
-    console.print("[bold red]Clear function not implemented yet.[/bold red]")
+    path = find_local_list_path()
+    if not path:
+        console.print(
+            "No local pydo list found. Use `pydo init` to create one in the current directory."
+        )
+        return
+    data = load_tasks(path)
+    if len(data["tasks"]) == 0:
+        console.print("No tasks in the current list. Create one by using `pydo add`.")
+        return
+    
+    tasks_deleted_count = 0
+    new_tasks = []
+    for task in data["tasks"]: 
+        
+        with console.status(f"[bold green]Clearing task {task['description']}...", spinner="dots"):
+            time.sleep(0.7)
+       
+        if not task["completed"]:
+            new_tasks.append(task)
+        else:
+            tasks_deleted_count += 1
+
+    if tasks_deleted_count > 0:
+        data["tasks"] = new_tasks
+        save_tasks(path, data)
+        console.print(f"[bold green]List cleared of {tasks_deleted_count} tasks. [/bold green]")
 
 # --- Main Entry Point & Argument Parsing ---
 def run():
