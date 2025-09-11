@@ -1,9 +1,11 @@
 import pdb
+from pprint import pp
 import uuid
 import json
 import argparse
 import sys
 from pathlib import Path
+from pydo import console
 
 # --- Context Resolution ---
 
@@ -22,19 +24,6 @@ def find_local_list_path():
 def get_global_list_path():
     return Path.home() / ".pydo" / "tasks.json"
 
-def get_backend():
-    """
-    Determines whether to use the global or local backend.
-    This is a placeholder for your actual context resolution.
-    """
-    # This check will be overridden by the --global flag later
-    local_path = find_local_list_path()
-    if local_path:
-        return Backend(is_global=False, path=local_path)
-    
-    # You need to define where your global list is stored
-    global_path = Path.home() / ".pydo_global"
-    return Backend(is_global=True, path=global_path)
 """
 {
   "schema_version": 1,
@@ -135,8 +124,22 @@ def handle_add(args):
     save_tasks(path, data)
 
 def handle_done(args):
-    backend = args.backend
-    backend.complete_tasks(args.task_ids)
+    # 1. Load tasks
+    path = find_local_list_path()
+    if not path:
+        print("No local pydo list found. Use `pydo init` to create one in the current directory.")
+        return
+    data = load_tasks(path)
+    if len(data["tasks"]) == 0:
+        print("No tasks in the current list. Create one by using `pydo add`.")
+        return
+    # 2. For args.??? toggle done field in the data
+    for task_id in args.task_ids:
+        if (task_id - 1) < 0 or task_id > len(data['tasks']):
+            continue
+        data['tasks'][task_id-1]["completed"] = True
+    # 3. Save the data
+    save_tasks(path, data)
 
 def handle_undone(args):
     backend = args.backend
