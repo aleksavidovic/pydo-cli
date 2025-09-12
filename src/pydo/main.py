@@ -67,7 +67,7 @@ def handle_init(args):
     console.print(f"Creating pydo directory at {pydo_dir}...")
     pydo_dir.mkdir(exist_ok=True)
 
-    initial_data = {"schema_version": 1, "tasks": []}
+    initial_data = {"schema_version": 1, "metadata": {"total_done_tasks": 0}, "tasks": []}
 
     console.print(f"Creating tasks file at {tasks_file}...")
     tasks_file.write_text(json.dumps(initial_data, indent=2))
@@ -91,10 +91,12 @@ def handle_list(args):
     if path is not None:
         data = load_tasks(path)
         print_tasks(data["tasks"], show_all=args.all, show_done=args.done)
+        console.print(f"Total tasks done: {data['metadata']['total_done_count']}")
     else:
         console.print(
             f"Task loading failed. Are you sure pydo is initialized here ({path})?"
         )
+
 
 
 def handle_add(args):
@@ -151,6 +153,9 @@ def handle_done(args):
 
     # 3. Save the data back to the file if changes were made
     if tasks_completed_count > 0:
+        if not data["metadata"]:
+            data["metadata"] = {"total_done_count": tasks_completed_count}
+        data["metadata"]["total_done_count"] += tasks_completed_count
         save_tasks(path, data)
         if tasks_completed_count > 1:
              console.print(f"\n[bold green]Nice work! You've completed {tasks_completed_count} tasks. 🎉[/bold green]")
@@ -158,7 +163,6 @@ def handle_done(args):
              console.print("[bold green]Nice work! 🎉[/bold green]")
 
 def handle_undone(args):
-    # 1. Load tasks
     path = find_local_list_path()
     if not path:
         console.print(
@@ -170,7 +174,6 @@ def handle_undone(args):
         console.print("No tasks in the current list. Create one by using `pydo add`.")
         return
     
-    # 2. go through the list of ids and mark undone
     tasks_uncompleted_count = 0
     for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
         if (task_id - 1) < 0 or task_id > len(data["tasks"]):
@@ -193,6 +196,7 @@ def handle_undone(args):
         # 3. Save file and report progress
 
     if tasks_uncompleted_count > 0:
+        data["metadata"]["total_done_count"] -= tasks_uncompleted_count
         save_tasks(path, data)
         if tasks_uncompleted_count > 1:
              console.print(f"\n[bold yellow]You've changed {tasks_uncompleted_count} tasks back to not complete. Go get them! [/bold yellow]")
