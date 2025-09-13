@@ -10,6 +10,16 @@ from rich.table import Table
 
 from pydo import console
 from pydo.art import run_init_animation
+# Single task structure
+#{"id": str(uuid.uuid4()), "description": description, "completed": False}
+TASKS_JSON_TEMPLATE = {
+    "schema_version": 1, 
+    "metadata": {
+        "total_completed_tasks": 0  # Since task field is called "completed", this one has to follow
+    }, 
+    "tasks": []
+}
+
 
 # --- Context Resolution ---
 def find_local_list_path():
@@ -34,7 +44,7 @@ def save_tasks(path: Path, data: dict):
 
 def load_tasks(path: Path):
     if not path.exists():
-        return {"schema_version": 1, "tasks": []}
+        return TASKS_JSON_TEMPLATE 
     with path.open("r") as f:
         return json.load(f)
 
@@ -67,7 +77,7 @@ def handle_init(args):
     console.print(f"Creating pydo directory at {pydo_dir}...")
     pydo_dir.mkdir(exist_ok=True)
 
-    initial_data = {"schema_version": 1, "metadata": {"total_done_tasks": 0}, "tasks": []}
+    initial_data = TASKS_JSON_TEMPLATE
 
     console.print(f"Creating tasks file at {tasks_file}...")
     tasks_file.write_text(json.dumps(initial_data, indent=2))
@@ -82,16 +92,23 @@ def handle_status(args):
         return
     if local_path and (local_path != Path.home()):
         console.print(f"- Active list: Local ({local_path.parent})")
+        try:
+            tasks = load_tasks(local_path)
+            if "schema_version" not in tasks or (tasks["schema_version"] != 1):
+                raise Exception("Issue with tasks.json: schema field incorrect")
+            elif "metadata" not in tasks or "total_completed_tasks" not in tasks["metadata"]:
+                raise Exception("Issue with tasks.json: metadata corrupted.")
+        except Exception as e:
+            console.print(f"[red bold]Error in data file: {e}")
     else:
         console.print("- Active list: Global")
-
 
 def handle_list(args):
     path = find_local_list_path()
     if path is not None:
         data = load_tasks(path)
         print_tasks(data["tasks"], show_all=args.all, show_done=args.done)
-        console.print(f"Total tasks done: {data['metadata']['total_done_count']}")
+        console.print(f'Total tasks done: {data["metadata"]["total_completed_tasks"]}')
     else:
         console.print(
             f"Task loading failed. Are you sure pydo is initialized here ({path})?"
@@ -154,8 +171,8 @@ def handle_done(args):
     # 3. Save the data back to the file if changes were made
     if tasks_completed_count > 0:
         if not data["metadata"]:
-            data["metadata"] = {"total_done_count": tasks_completed_count}
-        data["metadata"]["total_done_count"] += tasks_completed_count
+            data["metadata"] = {"total_completed_tasks": tasks_completed_count}
+        data["metadata"]["total_completed_tasks"] += tasks_completed_count
         save_tasks(path, data)
         if tasks_completed_count > 1:
              console.print(f"\n[bold green]Nice work! You've completed {tasks_completed_count} tasks. 🎉[/bold green]")
@@ -196,7 +213,7 @@ def handle_undone(args):
         # 3. Save file and report progress
 
     if tasks_uncompleted_count > 0:
-        data["metadata"]["total_done_count"] -= tasks_uncompleted_count
+        data["metadata"]["total_completed_tasks"] -= tasks_uncompleted_count
         save_tasks(path, data)
         if tasks_uncompleted_count > 1:
              console.print(f"\n[bold yellow]You've changed {tasks_uncompleted_count} tasks back to not complete. Go get them! [/bold yellow]")
