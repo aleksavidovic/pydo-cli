@@ -1,8 +1,8 @@
-import pdb
-import time
 import argparse
 import json
+import os
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -10,14 +10,15 @@ from rich.table import Table
 
 from pydo import console
 from pydo.art import run_init_animation
+
 # Single task structure
-#{"id": str(uuid.uuid4()), "description": description, "completed": False}
+# {"id": str(uuid.uuid4()), "description": description, "completed": False}
 TASKS_JSON_TEMPLATE = {
-    "schema_version": 1, 
+    "schema_version": 1,
     "metadata": {
         "total_completed_tasks": 0  # Since task field is called "completed", this one has to follow
-    }, 
-    "tasks": []
+    },
+    "tasks": [],
 }
 
 
@@ -34,19 +35,23 @@ def find_local_list_path():
         current_dir = current_dir.parent
     return None
 
+
 def get_global_list_path():
     return Path.home() / ".pydo" / "tasks.json"
+
 
 # --- Helper Functions (Save / Load) ---
 def save_tasks(path: Path, data: dict):
     with path.open("w") as f:
         json.dump(data, f, indent=2)
 
+
 def load_tasks(path: Path):
     if not path.exists():
-        return TASKS_JSON_TEMPLATE 
+        return TASKS_JSON_TEMPLATE
     with path.open("r") as f:
         return json.load(f)
+
 
 def print_tasks(tasks, show_all=False, show_done=True):
     table = Table(title="pydo tasks")
@@ -56,7 +61,7 @@ def print_tasks(tasks, show_all=False, show_done=True):
 
     for display_id, task in enumerate(tasks, 1):
         status = "✅" if task["completed"] else "❌"
-        description = task['description']
+        description = task["description"]
         style = "green strike dim" if task["completed"] else "yellow"
         table.add_row(str(display_id), status, description, style=style)
 
@@ -85,7 +90,7 @@ def handle_init(args):
     console.print(f"🎉 Successfully initialized pydo list in {current_dir}")
 
 
-def handle_status(args): 
+def handle_status(args):
     local_path = find_local_list_path()
     if local_path == Path.home() / ".pydo":
         console.print("- Active list: Global")
@@ -96,29 +101,38 @@ def handle_status(args):
             tasks = load_tasks(local_path)
             if "schema_version" not in tasks or (tasks["schema_version"] != 1):
                 raise Exception("Issue with tasks.json: schema field incorrect")
-            elif "metadata" not in tasks or "total_completed_tasks" not in tasks["metadata"]:
+            elif (
+                "metadata" not in tasks
+                or "total_completed_tasks" not in tasks["metadata"]
+            ):
                 raise Exception("Issue with tasks.json: metadata corrupted.")
         except Exception as e:
             console.print(f"[red bold]Error in data file: {e}")
     else:
         console.print("- Active list: Global")
 
+
 def handle_list(args):
     path = find_local_list_path()
     if path is not None:
         data = load_tasks(path)
         print_tasks(data["tasks"], show_all=args.all, show_done=args.done)
-        console.print(f'Total tasks done: {data["metadata"]["total_completed_tasks"]}')
+        console.print(f"Total tasks done: {data['metadata']['total_completed_tasks']}")
     else:
         console.print(
             f"Task loading failed. Are you sure pydo is initialized here ({path})?"
         )
 
 
+def handle_clearlist(args):
+    # clear screen
+    os.system("cls" if os.name == "nt" else "clear")
+    handle_list(args)
+
 
 def handle_add(args):
     path = find_local_list_path()
-    if path == None:
+    if path is None:
         path = get_global_list_path()
     try:
         with open(path, "r") as f:
@@ -132,7 +146,9 @@ def handle_add(args):
     new_task = {"id": str(uuid.uuid4()), "description": description, "completed": False}
     data["tasks"].append(new_task)
     save_tasks(path, data)
-    console.print(f"✅ Added: '[yellow]{description}[/yellow]' to your [blue]local[/blue] list.")
+    console.print(
+        f"✅ Added: '[yellow]{description}[/yellow]' to your [blue]local[/blue] list."
+    )
 
 
 def handle_done(args):
@@ -151,21 +167,27 @@ def handle_done(args):
 
     for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
         if (task_id - 1) < 0 or task_id > len(data["tasks"]):
-            console.print(f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping.")
+            console.print(
+                f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping."
+            )
             continue
-        
+
         task = data["tasks"][task_id - 1]
 
         if task["completed"]:
-            console.print(f"Task {task_id}: '[yellow]{task['description']}[/yellow]' is already done.")
+            console.print(
+                f"Task {task_id}: '[yellow]{task['description']}[/yellow]' is already done."
+            )
             continue
 
-        with console.status(f"[bold green]Completing task {task_id}...", spinner="dots"):
+        with console.status(
+            f"[bold green]Completing task {task_id}...", spinner="dots"
+        ):
             # This sleep makes the animation feel more deliberate
             time.sleep(0.7)
             task["completed"] = True
             tasks_completed_count += 1
-        
+
         console.print(f"✅[strike dim green]{task['description']}[/strike dim green]")
 
     # 3. Save the data back to the file if changes were made
@@ -175,9 +197,12 @@ def handle_done(args):
         data["metadata"]["total_completed_tasks"] += tasks_completed_count
         save_tasks(path, data)
         if tasks_completed_count > 1:
-             console.print(f"\n[bold green]Nice work! You've completed {tasks_completed_count} tasks. 🎉[/bold green]")
+            console.print(
+                f"\n[bold green]Nice work! You've completed {tasks_completed_count} tasks. 🎉[/bold green]"
+            )
         else:
-             console.print("[bold green]Nice work! 🎉[/bold green]")
+            console.print("[bold green]Nice work! 🎉[/bold green]")
+
 
 def handle_undone(args):
     path = find_local_list_path()
@@ -190,25 +215,31 @@ def handle_undone(args):
     if len(data["tasks"]) == 0:
         console.print("No tasks in the current list. Create one by using `pydo add`.")
         return
-    
+
     tasks_uncompleted_count = 0
     for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
         if (task_id - 1) < 0 or task_id > len(data["tasks"]):
-            console.print(f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping.")
+            console.print(
+                f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping."
+            )
             continue
-        
+
         task = data["tasks"][task_id - 1]
 
         if not task["completed"]:
-            console.print(f"Task {task_id}: '[yellow]{task['description']}[/yellow]' is already not completed.")
+            console.print(
+                f"Task {task_id}: '[yellow]{task['description']}[/yellow]' is already not completed."
+            )
             continue
 
-        with console.status(f"[bold yellow]Reverting task status {task_id}...", spinner="dots"):
+        with console.status(
+            f"[bold yellow]Reverting task status {task_id}...", spinner="dots"
+        ):
             # This sleep makes the animation feel more deliberate
             time.sleep(0.7)
             task["completed"] = False
             tasks_uncompleted_count += 1
-        
+
         console.print(f"[strike dim yellow]{task['description']}[/strike dim yellow]")
         # 3. Save file and report progress
 
@@ -216,12 +247,16 @@ def handle_undone(args):
         data["metadata"]["total_completed_tasks"] -= tasks_uncompleted_count
         save_tasks(path, data)
         if tasks_uncompleted_count > 1:
-             console.print(f"\n[bold yellow]You've changed {tasks_uncompleted_count} tasks back to not complete. Go get them! [/bold yellow]")
+            console.print(
+                f"\n[bold yellow]You've changed {tasks_uncompleted_count} tasks back to not complete. Go get them! [/bold yellow]"
+            )
         else:
-             console.print("[bold green]Task back in todo. Go get it![/bold green]")
+            console.print("[bold green]Task back in todo. Go get it![/bold green]")
+
 
 def handle_edit(args):
     console.print("[bold red]Edit function not implemented yet.[/bold red]")
+
 
 def handle_remove(args):
     path = find_local_list_path()
@@ -234,27 +269,34 @@ def handle_remove(args):
     if len(data["tasks"]) == 0:
         console.print("No tasks in the current list. Create one by using `pydo add`.")
         return
-    
+
     tasks_deleted_count = 0
     for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
         if (task_id - 1) < 0 or task_id > len(data["tasks"]):
-            console.print(f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping.")
+            console.print(
+                f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping."
+            )
             continue
-        
 
-        with console.status(f"[bold yellow]Removing task [strike dim green]{task_id}[/]...", spinner="dots"):
+        with console.status(
+            f"[bold yellow]Removing task [strike dim green]{task_id}[/]...",
+            spinner="dots",
+        ):
             # This sleep makes the animation feel more deliberate
             time.sleep(0.7)
 
-            del(data["tasks"][task_id - 1])
+            del data["tasks"][task_id - 1]
             tasks_deleted_count += 1
 
     if tasks_deleted_count > 0:
         save_tasks(path, data)
         if tasks_deleted_count > 1:
-             console.print(f"\n[bold yellow]You've deleted {tasks_deleted_count} tasks. [/bold yellow]")
+            console.print(
+                f"\n[bold yellow]You've deleted {tasks_deleted_count} tasks. [/bold yellow]"
+            )
         else:
-             console.print("[bold green]Task deleted.[/bold green]")
+            console.print("[bold green]Task deleted.[/bold green]")
+
 
 def handle_clear(args):
     path = find_local_list_path()
@@ -267,14 +309,15 @@ def handle_clear(args):
     if len(data["tasks"]) == 0:
         console.print("No tasks in the current list. Create one by using `pydo add`.")
         return
-    
+
     tasks_deleted_count = 0
     new_tasks = []
-    for task in data["tasks"]: 
-        
-        with console.status(f"[bold green]Clearing task {task['description']}...", spinner="dots"):
+    for task in data["tasks"]:
+        with console.status(
+            f"[bold green]Clearing task {task['description']}...", spinner="dots"
+        ):
             time.sleep(0.7)
-       
+
         if not task["completed"]:
             new_tasks.append(task)
         else:
@@ -283,7 +326,10 @@ def handle_clear(args):
     if tasks_deleted_count > 0:
         data["tasks"] = new_tasks
         save_tasks(path, data)
-        console.print(f"[bold green]List cleared of {tasks_deleted_count} tasks. [/bold green]")
+        console.print(
+            f"[bold green]List cleared of {tasks_deleted_count} tasks. [/bold green]"
+        )
+
 
 # --- Main Entry Point & Argument Parsing ---
 def run():
@@ -326,6 +372,19 @@ def run():
         "--done", action="store_true", help="Show only completed tasks."
     )
     parser_list.set_defaults(func=handle_list)
+
+    # Command cls
+    parser_clearlist = subparsers.add_parser("cls", help="Clear screen and list tasks.")
+    parser_clearlist.add_argument(
+        "-a",
+        "--all",
+        action="store_true",
+        help="Show all tasks, including completed ones.",
+    )
+    parser_clearlist.add_argument(
+        "--done", action="store_true", help="Show only completed tasks."
+    )
+    parser_clearlist.set_defaults(func=handle_clearlist)
 
     # Command: add
     parser_add = subparsers.add_parser("add", help="Add a new task.")
@@ -383,7 +442,7 @@ def run():
 
     # --- Execution ---
     args = parser.parse_args(sys.argv[1:])
-    
+
     if hasattr(args, "func"):
         args.func(args)
 
