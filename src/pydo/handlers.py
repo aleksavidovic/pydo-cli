@@ -54,11 +54,11 @@ def load_tasks(path: Path):
 def print_tasks(tasks, show_all=False, show_done=True):
     table = Table(title="pydo tasks")
     table.add_column("ID", justify="right", style="cyan", no_wrap=True)
-    table.add_column("Status", style="magenta")
+    table.add_column("Status", justify="center", style="magenta")
     table.add_column("Description")
 
     for display_id, task in enumerate(tasks, 1):
-        status = "✅" if task["completed"] else "❌"
+        status = "✅" if task["completed"] else "[red]❌[/red]"
         description = task["description"]
         style = "green strike dim" if task["completed"] else "yellow"
         table.add_row(str(display_id), status, description, style=style)
@@ -68,6 +68,8 @@ def print_tasks(tasks, show_all=False, show_done=True):
 
 # --- CLI Command Handlers ---
 def handle_init(args):
+    if args.is_global:
+        print("Initializing globl list")
     current_dir = Path.cwd()
     pydo_dir = current_dir / ".pydo"
     tasks_file = pydo_dir / "tasks.json"
