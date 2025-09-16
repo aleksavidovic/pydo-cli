@@ -1,4 +1,4 @@
-# pydo
+# pydo - Plan Your Daily Output
 
 A simple, local-first todo list manager for your terminal.
 
