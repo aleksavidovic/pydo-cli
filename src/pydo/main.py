@@ -2,7 +2,6 @@ import argparse
 import sys
 from pydo import handlers
 
-# --- Main Entry Point & Argument Parsing ---
 def run():
     parser = argparse.ArgumentParser(
         prog="pydo", description="A simple command-line todo list manager."
@@ -11,6 +10,7 @@ def run():
     parser.add_argument(
         "-g",
         "--global",
+        dest="is_global",
         action="store_true",
         help="Force operation on the global todo list.",
     )
