@@ -19,6 +19,9 @@ TASKS_JSON_TEMPLATE = {
     "tasks": [],
 }
 
+PYDO_DIR = ".pydo"
+PYDO_TASKS_FILENAME = "tasks.json"
+
 
 # --- Context Resolution ---
 def find_local_list_path():
@@ -68,26 +71,28 @@ def print_tasks(tasks, show_all=False, show_done=True):
 
 # --- CLI Command Handlers ---
 def handle_init(args):
-    if args.is_global:
-        print("Initializing globl list")
-    current_dir = Path.cwd()
-    pydo_dir = current_dir / ".pydo"
-    tasks_file = pydo_dir / "tasks.json"
+    CWD = Path.home() if args.is_global else Path.cwd()
+    tasks_path = CWD / PYDO_DIR / PYDO_TASKS_FILENAME
 
-    if tasks_file.is_file():
-        console.print(f"pydo already initialized in {current_dir}")
+    if tasks_path.is_file():
+        console.print(f"pydo already initialized in {CWD}")
         return
+
     run_init_animation()
 
-    console.print(f"Creating pydo directory at {pydo_dir}...")
-    pydo_dir.mkdir(exist_ok=True)
+    console.print(f"Creating pydo directory at {CWD}...")
+    try:
+        (CWD / PYDO_DIR).mkdir(exist_ok=True)
+    except FileExistsError as e:
+        console.print(f"[red]{e}[/red]")
+        console.print(f"A file named {PYDO_DIR} exists at {CWD}. Can't create directory with name {PYDO_DIR}")
+        console.print(f"Deleted the file {CWD / PYDO_DIR} and try initializing again.")
+        return
 
-    initial_data = TASKS_JSON_TEMPLATE
+    console.print(f"Creating tasks file at {tasks_path}...")
+    tasks_path.write_text(json.dumps(TASKS_JSON_TEMPLATE, indent=2))
 
-    console.print(f"Creating tasks file at {tasks_file}...")
-    tasks_file.write_text(json.dumps(initial_data, indent=2))
-
-    console.print(f"🎉 Successfully initialized pydo list in {current_dir}")
+    console.print(f"🎉 Successfully initialized pydo list in {CWD}")
 
 
 def handle_status(args):
@@ -125,7 +130,6 @@ def handle_list(args):
 
 
 def handle_clearlist(args):
-    # clear screen
     os.system("cls" if os.name == "nt" else "clear")
     handle_list(args)
 
