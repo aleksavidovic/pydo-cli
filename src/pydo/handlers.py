@@ -54,20 +54,28 @@ def load_tasks(path: Path):
         return json.load(f)
 
 
-def print_tasks(tasks, show_all=False, show_done=True):
-    table = Table(title="pydo tasks")
+def print_tasks(tasks, total_completed, show_all=False, show_done=True):
+    title = "Plan Your Day Out"
+    caption = f"[normal]Total tasks done: [green]{total_completed}[/]"
+    table = Table(title=None, 
+                  title_style="bold green", 
+                  caption=caption, 
+                  caption_style="",
+                  highlight=True,
+                  show_lines=False)
     table.add_column("ID", justify="right", style="cyan", no_wrap=True)
     table.add_column("Status", justify="center", style="magenta")
     table.add_column("Description")
 
-    for display_id, task in enumerate(tasks, 1):
-        status = "✅" if task["completed"] else "[red]❌[/red]"
-        description = task["description"]
-        style = "green strike dim" if task["completed"] else "yellow"
-        table.add_row(str(display_id), status, description, style=style)
+    for id, task in enumerate(tasks, 1):
+        display_id = f"[green]{id}[/]" if task["completed"] else f"{id}"
+        status = "[green]✅[/]" if task["completed"] else "[red]❌[/red]"
+        description_text = task["description"]
+        description = f"[green strike]{description_text}[/]" if task["completed"] else f"[yellow]{description_text}[/yellow]"
+        # style = "green strike dim" if task["completed"] else "yellow"
+        table.add_row(display_id, status, description) # , style=style)
 
     console.print(table)
-
 
 # --- CLI Command Handlers ---
 def handle_init(args):
@@ -121,8 +129,7 @@ def handle_list(args):
     path = find_local_list_path()
     if path is not None:
         data = load_tasks(path)
-        print_tasks(data["tasks"], show_all=args.all, show_done=args.done)
-        console.print(f"Total tasks done: {data['metadata']['total_completed_tasks']}")
+        print_tasks(data["tasks"], data["metadata"]["total_completed_tasks"], show_all=args.all, show_done=args.done)
     else:
         console.print(
             f"Task loading failed. Are you sure pydo is initialized here ({path})?"
