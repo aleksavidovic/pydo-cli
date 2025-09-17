@@ -55,10 +55,9 @@ def load_tasks(path: Path):
         return json.load(f)
 
 
-def print_tasks(tasks, total_completed, show_all=False, show_done=True):
-    title = "Plan Your Day Out"
+def print_tasks(tasks, total_completed, show_all=False, show_done=True, title=""):
     caption = f"[normal]Total tasks done: [green]{total_completed}[/]"
-    table = Table(title=None, 
+    table = Table(title=title, 
                   title_style="bold green", 
                   caption=caption, 
                   caption_style="",
@@ -145,14 +144,30 @@ def validate_tasks_file(path):
     
 
 def handle_list(args):
+    if args.is_global:
+        path = get_global_list_path()
+        if path is None:
+            console.print("No global list found.")
+            console.print("Create one with [yellow]pydo --global init[/yellow]")
+            return
+        else:
+            data = load_tasks(path)
+            print_tasks(data["tasks"], data["metadata"]["total_completed_tasks"], show_all=args.all, show_done=args.done, title="GLOBAL LIST")
+            return
+
     path = find_local_list_path()
-    if path is not None:
-        data = load_tasks(path)
-        print_tasks(data["tasks"], data["metadata"]["total_completed_tasks"], show_all=args.all, show_done=args.done)
-    else:
-        console.print(
-            f"Task loading failed. Are you sure pydo is initialized here ({path})?"
-        )
+    title = "Local list"
+    if path is None:
+        console.print("No local list found.")
+        path = get_global_list_path()
+        if path is None:
+            console.print("No global list found.")
+            console.print("No local or global list found. Create a new list using [yellow]pydo [-g] init[/yellow]") 
+            return
+        else:
+            title = "GLOBAL LIST"
+    data = load_tasks(path)
+    print_tasks(data["tasks"], data["metadata"]["total_completed_tasks"], show_all=args.all, show_done=args.done, title=title)
 
 
 def handle_clearlist(args):
