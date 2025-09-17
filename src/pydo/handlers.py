@@ -29,17 +29,18 @@ def find_local_list_path():
     Traverse up from the current directory to find a '.pydo' file/directory.
     Returns the Path object if found, otherwise None.
     """
-    current_dir = Path.cwd()
-    while current_dir != current_dir.parent:
-        if (current_dir / ".pydo" / "tasks.json").exists():
-            return current_dir / ".pydo" / "tasks.json"
-        current_dir = current_dir.parent
+    CWD = Path.cwd()
+    HOME = Path.home()
+    while CWD != HOME:
+        if (CWD / PYDO_DIR / PYDO_TASKS_FILENAME ).exists():
+            return CWD / PYDO_DIR / PYDO_TASKS_FILENAME
+        CWD = CWD.parent
     return None
 
 
 def get_global_list_path():
-    return Path.home() / ".pydo" / "tasks.json"
-
+    global_list_path = Path.home() / PYDO_DIR / PYDO_TASKS_FILENAME
+    return global_list_path if global_list_path.exists() else None
 
 # --- Helper Functions (Save / Load) ---
 def save_tasks(path: Path, data: dict):
@@ -105,25 +106,33 @@ def handle_init(args):
 
 def handle_status(args):
     local_path = find_local_list_path()
-    if local_path == Path.home() / ".pydo":
-        console.print("- Active list: Global")
-        return
-    if local_path and (local_path != Path.home()):
-        console.print(f"- Active list: Local ({local_path.parent})")
-        try:
-            tasks = load_tasks(local_path)
-            if "schema_version" not in tasks or (tasks["schema_version"] != 1):
-                raise Exception("Issue with tasks.json: schema field incorrect")
-            elif (
-                "metadata" not in tasks
-                or "total_completed_tasks" not in tasks["metadata"]
-            ):
-                raise Exception("Issue with tasks.json: metadata corrupted.")
-        except Exception as e:
-            console.print(f"[red bold]Error in data file: {e}")
+    if local_path is None:
+        global_path = get_global_list_path()
+        if global_path is None:
+            console.print("No local or global list is active. Create a list with [yellow]pydo [-g] init[/yellow]")
+            return
+        else:
+            console.print(f"- Active list: Global ({global_path.parent})")
+            validate_tasks_file(global_path)
     else:
-        console.print("- Active list: Global")
+        console.print(f"- Active list: Local ({local_path.parent})")
+        validate_tasks_file(local_path)
 
+
+def validate_tasks_file(path):
+    try:
+        tasks = load_tasks(path)
+        if "schema_version" not in tasks or (tasks["schema_version"] != 1):
+            raise Exception(f"Issue with {path}: schema field incorrect")
+        elif (
+            "metadata" not in tasks
+            or "total_completed_tasks" not in tasks["metadata"]
+        ):
+            raise Exception(f"Issue with {path}: metadata corrupted.")
+        console.print(f"[green]Tasks file {path} verified successfully.[/green]")
+    except Exception as e:
+        console.print(f"[red bold]Error in data file: {e}")
+    
 
 def handle_list(args):
     path = find_local_list_path()
