@@ -176,9 +176,19 @@ def handle_clearlist(args):
 
 
 def handle_add(args):
-    path = find_local_list_path()
-    if path is None:
+    if args.is_global:
         path = get_global_list_path()
+        if path is None:
+            console.log("No global list found.")
+            return
+        list_name = "global"
+    else:
+        path = find_local_list_path()
+        if path is None:
+            console.log("No local list found.")
+            return
+        list_name = "local"
+
     try:
         with open(path, "r") as f:
             data = json.load(f)
@@ -192,17 +202,24 @@ def handle_add(args):
     data["tasks"].append(new_task)
     save_tasks(path, data)
     console.print(
-        f"✅ Added: '[yellow]{description}[/yellow]' to your [blue]local[/blue] list."
+        f"✅ Added: '[yellow]{description}[/yellow]' to your [blue]{list_name}[/blue] list."
     )
 
 
 def handle_done(args):
-    path = find_local_list_path()
-    if not path:
-        console.print(
-            "No local pydo list found. Use `pydo init` to create one in the current directory."
-        )
-        return
+    if args.is_global:
+        path = get_global_list_path()
+        if path is None:
+            console.log("No global list found.")
+            return
+    else:
+        path = find_local_list_path()
+        if path is None:
+            console.print(
+                "No local pydo list found. Use `pydo init` to create one in the current directory."
+            )
+            return
+
     data = load_tasks(path)
     if len(data["tasks"]) == 0:
         console.print("No tasks in the current list. Create one by using `pydo add`.")
@@ -250,12 +267,18 @@ def handle_done(args):
 
 
 def handle_undone(args):
-    path = find_local_list_path()
-    if not path:
-        console.print(
-            "No local pydo list found. Use `pydo init` to create one in the current directory."
-        )
-        return
+    if args.is_global:
+        path = get_global_list_path()
+        if path is None:
+            console.log("No global list found.")
+            return
+    else:
+        path = find_local_list_path()
+        if path is None:
+            console.print(
+                "No local pydo list found. Use `pydo init` to create one in the current directory."
+            )
+            return
     data = load_tasks(path)
     if len(data["tasks"]) == 0:
         console.print("No tasks in the current list. Create one by using `pydo add`.")
@@ -304,12 +327,18 @@ def handle_edit(args):
 
 
 def handle_remove(args):
-    path = find_local_list_path()
-    if not path:
-        console.print(
-            "No local pydo list found. Use `pydo init` to create one in the current directory."
-        )
-        return
+    if args.is_global:
+        path = get_global_list_path()
+        if path is None:
+            console.log("No global list found.")
+            return
+    else:
+        path = find_local_list_path()
+        if path is None:
+            console.print(
+                "No local pydo list found. Use `pydo init` to create one in the current directory."
+            )
+            return
     data = load_tasks(path)
     if len(data["tasks"]) == 0:
         console.print("No tasks in the current list. Create one by using `pydo add`.")
@@ -344,12 +373,18 @@ def handle_remove(args):
 
 
 def handle_clear(args):
-    path = find_local_list_path()
-    if not path:
-        console.print(
-            "No local pydo list found. Use `pydo init` to create one in the current directory."
-        )
-        return
+    if args.is_global:
+        path = get_global_list_path()
+        if path is None:
+            console.log("No global list found.")
+            return
+    else:
+        path = find_local_list_path()
+        if path is None:
+            console.print(
+                "No local pydo list found. Use `pydo init` to create one in the current directory."
+            )
+            return
     data = load_tasks(path)
     if len(data["tasks"]) == 0:
         console.print("No tasks in the current list. Create one by using `pydo add`.")
