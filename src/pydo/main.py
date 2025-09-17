@@ -64,6 +64,14 @@ def run():
     )
     parser_add.set_defaults(func=handlers.handle_add)
 
+    parser_done = subparsers.add_parser("focus", help="Toggle focus on task(s)")
+    parser_done.add_argument(
+        "task_ids",
+        nargs="+",
+        type=int,
+        help="The ID(s) of the task(s) to add focus to.",
+    )
+    parser_done.set_defaults(func=handlers.handle_focus)
     # Command: done
     parser_done = subparsers.add_parser("done", help="Mark task(s) as done.")
     parser_done.add_argument(

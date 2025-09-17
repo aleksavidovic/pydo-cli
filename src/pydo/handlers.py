@@ -70,8 +70,13 @@ def print_tasks(tasks, total_completed, show_all=False, show_done=True, title=""
     for id, task in enumerate(tasks, 1):
         display_id = f"[green]{id}[/]" if task["completed"] else f"{id}"
         status = "[green]✅[/]" if task["completed"] else "[red]❌[/red]"
+        desc_not_done_style = "yellow"
+        if task.get("focus") is not None and task["completed"] == False:
+            if task["focus"] == True:
+                status = "[bold blue]▶️[/bold blue]"
+                desc_not_done_style = "bold blue"
         description_text = task["description"]
-        description = f"[green strike]{description_text}[/]" if task["completed"] else f"[yellow]{description_text}[/yellow]"
+        description = f"[green strike]{description_text}[/]" if task["completed"] else f"[{desc_not_done_style}]{description_text}[/{desc_not_done_style}]"
         # style = "green strike dim" if task["completed"] else "yellow"
         table.add_row(display_id, status, description) # , style=style)
 
@@ -205,6 +210,56 @@ def handle_add(args):
         f"✅ Added: '[yellow]{description}[/yellow]' to your [blue]{list_name}[/blue] list."
     )
 
+def handle_focus(args):
+    if args.is_global:
+        path = get_global_list_path()
+        if path is None:
+            console.log("No global list found.")
+            return
+    else:
+        path = find_local_list_path()
+        if path is None:
+            console.print(
+                "No local pydo list found. Use `pydo init` to create one in the current directory."
+            )
+            return
+
+    data = load_tasks(path)
+    if len(data["tasks"]) == 0:
+        console.print("No tasks in the current list. Create one by using `pydo add`.")
+        return
+
+
+    tasks_focused_count = 0
+    tasks_unfocused_count = 0
+    for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
+        if (task_id - 1) < 0 or task_id > len(data["tasks"]):
+            console.print(
+                f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping."
+            )
+            continue
+
+        task = data["tasks"][task_id - 1]
+
+        if task.get("focus") is not None:
+            if task["focus"] == True:
+                task["focus"] = False
+                tasks_unfocused_count += 1
+            else:
+                task["focus"] = True
+                tasks_focused_count += 1
+        else:
+            task["focus"] = True
+            tasks_focused_count += 1
+
+        if tasks_focused_count > 0:
+            console.print(f"Added focus on [dim blue]{tasks_focused_count}[/dim blue] task{'s' if tasks_focused_count > 1 else ''}")
+
+        if tasks_unfocused_count > 0:
+            console.print(f"Removed focus from [dim red]{tasks_unfocused_count}[/dim red] task{'s' if tasks_unfocused_count > 1 else ''}")
+
+        if tasks_focused_count > 0 or tasks_unfocused_count > 0:
+            save_tasks(path, data)
 
 def handle_done(args):
     if args.is_global:
