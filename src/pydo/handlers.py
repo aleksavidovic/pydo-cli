@@ -105,6 +105,16 @@ def handle_init(args):
 
 
 def handle_status(args):
+    if args.is_global:
+        global_path = get_global_list_path()
+        if global_path is None:
+            console.print("No global list present. Create global list with [yellow]pydo --global init[/yellow]")
+            return
+        else:
+            console.print(f"- Active list: Global ({global_path.parent})")
+            validate_tasks_file(global_path)
+            return
+
     local_path = find_local_list_path()
     if local_path is None:
         global_path = get_global_list_path()
