@@ -29,6 +29,9 @@ dependencies = [
   "rich",
   "ruff (>=0.13.0,<0.14.0)",
   "pyfiglet (>=1.0.4,<2.0.0)",
+  "google-api-python-client>=2.182.0",
+  "google-auth-httplib2>=0.2.0",
+  "google-auth-oauthlib>=1.2.2",
 ]
 
 [project.urls]

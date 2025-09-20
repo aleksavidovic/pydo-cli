@@ -2,10 +2,13 @@ pycache/
 *.py[cod]
 *$py.class
 
+.env
 .venv/
 venv/
 ENV/
-
+token.json
+credentials.json
+*token.json
 build/
 dist/
 *.egg-info/

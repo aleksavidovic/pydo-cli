@@ -1,6 +1,8 @@
 import argparse
 import sys
+
 from pydo import handlers
+
 
 def run():
     parser = argparse.ArgumentParser(

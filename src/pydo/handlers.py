@@ -32,7 +32,7 @@ def find_local_list_path():
     CWD = Path.cwd()
     HOME = Path.home()
     while CWD != HOME:
-        if (CWD / PYDO_DIR / PYDO_TASKS_FILENAME ).exists():
+        if (CWD / PYDO_DIR / PYDO_TASKS_FILENAME).exists():
             return CWD / PYDO_DIR / PYDO_TASKS_FILENAME
         CWD = CWD.parent
     return None
@@ -41,6 +41,7 @@ def find_local_list_path():
 def get_global_list_path():
     global_list_path = Path.home() / PYDO_DIR / PYDO_TASKS_FILENAME
     return global_list_path if global_list_path.exists() else None
+
 
 # --- Helper Functions (Save / Load) ---
 def save_tasks(path: Path, data: dict):
@@ -57,12 +58,14 @@ def load_tasks(path: Path):
 
 def print_tasks(tasks, total_completed, show_all=False, show_done=True, title=""):
     caption = f"[normal]Total tasks done: [green]{total_completed}[/]"
-    table = Table(title=title, 
-                  title_style="bold green", 
-                  caption=caption, 
-                  caption_style="",
-                  highlight=True,
-                  show_lines=False)
+    table = Table(
+        title=title,
+        title_style="bold green",
+        caption=caption,
+        caption_style="",
+        highlight=True,
+        show_lines=False,
+    )
     table.add_column("ID", justify="right", style="cyan", no_wrap=True)
     table.add_column("Status", justify="center", style="magenta")
     table.add_column("Description")
@@ -71,16 +74,21 @@ def print_tasks(tasks, total_completed, show_all=False, show_done=True, title=""
         display_id = f"[green]{id}[/]" if task["completed"] else f"{id}"
         status = "[green]✅[/]" if task["completed"] else "[red]❌[/red]"
         desc_not_done_style = "yellow"
-        if task.get("focus") is not None and task["completed"] == False:
-            if task["focus"] == True:
+        if task.get("focus") is not None and not task["completed"]:
+            if task["focus"]:
                 status = "[bold blue]▶️[/bold blue]"
                 desc_not_done_style = "bold blue"
         description_text = task["description"]
-        description = f"[green strike]{description_text}[/]" if task["completed"] else f"[{desc_not_done_style}]{description_text}[/{desc_not_done_style}]"
+        description = (
+            f"[green strike]{description_text}[/]"
+            if task["completed"]
+            else f"[{desc_not_done_style}]{description_text}[/{desc_not_done_style}]"
+        )
         # style = "green strike dim" if task["completed"] else "yellow"
-        table.add_row(display_id, status, description) # , style=style)
+        table.add_row(display_id, status, description)  # , style=style)
 
     console.print(table)
+
 
 # --- CLI Command Handlers ---
 def handle_init(args):
@@ -98,7 +106,9 @@ def handle_init(args):
         (CWD / PYDO_DIR).mkdir(exist_ok=True)
     except FileExistsError as e:
         console.print(f"[red]{e}[/red]")
-        console.print(f"A file named {PYDO_DIR} exists at {CWD}. Can't create directory with name {PYDO_DIR}")
+        console.print(
+            f"A file named {PYDO_DIR} exists at {CWD}. Can't create directory with name {PYDO_DIR}"
+        )
         console.print(f"Deleted the file {CWD / PYDO_DIR} and try initializing again.")
         return
 
@@ -112,7 +122,9 @@ def handle_status(args):
     if args.is_global:
         global_path = get_global_list_path()
         if global_path is None:
-            console.print("No global list present. Create global list with [yellow]pydo --global init[/yellow]")
+            console.print(
+                "No global list present. Create global list with [yellow]pydo --global init[/yellow]"
+            )
             return
         else:
             console.print(f"- Active list: Global ({global_path.parent})")
@@ -123,7 +135,9 @@ def handle_status(args):
     if local_path is None:
         global_path = get_global_list_path()
         if global_path is None:
-            console.print("No local or global list is active. Create a list with [yellow]pydo [-g] init[/yellow]")
+            console.print(
+                "No local or global list is active. Create a list with [yellow]pydo [-g] init[/yellow]"
+            )
             return
         else:
             console.print(f"- Active list: Global ({global_path.parent})")
@@ -139,14 +153,13 @@ def validate_tasks_file(path):
         if "schema_version" not in tasks or (tasks["schema_version"] != 1):
             raise Exception(f"Issue with {path}: schema field incorrect")
         elif (
-            "metadata" not in tasks
-            or "total_completed_tasks" not in tasks["metadata"]
+            "metadata" not in tasks or "total_completed_tasks" not in tasks["metadata"]
         ):
             raise Exception(f"Issue with {path}: metadata corrupted.")
         console.print(f"[green]Tasks file {path} verified successfully.[/green]")
     except Exception as e:
         console.print(f"[red bold]Error in data file: {e}")
-    
+
 
 def handle_list(args):
     if args.is_global:
@@ -157,7 +170,13 @@ def handle_list(args):
             return
         else:
             data = load_tasks(path)
-            print_tasks(data["tasks"], data["metadata"]["total_completed_tasks"], show_all=args.all, show_done=args.done, title="GLOBAL LIST")
+            print_tasks(
+                data["tasks"],
+                data["metadata"]["total_completed_tasks"],
+                show_all=args.all,
+                show_done=args.done,
+                title="GLOBAL LIST",
+            )
             return
 
     path = find_local_list_path()
@@ -167,12 +186,20 @@ def handle_list(args):
         path = get_global_list_path()
         if path is None:
             console.print("No global list found.")
-            console.print("No local or global list found. Create a new list using [yellow]pydo [-g] init[/yellow]") 
+            console.print(
+                "No local or global list found. Create a new list using [yellow]pydo [-g] init[/yellow]"
+            )
             return
         else:
             title = "GLOBAL LIST"
     data = load_tasks(path)
-    print_tasks(data["tasks"], data["metadata"]["total_completed_tasks"], show_all=args.all, show_done=args.done, title=title)
+    print_tasks(
+        data["tasks"],
+        data["metadata"]["total_completed_tasks"],
+        show_all=args.all,
+        show_done=args.done,
+        title=title,
+    )
 
 
 def handle_clearlist(args):
@@ -210,6 +237,7 @@ def handle_add(args):
         f"✅ Added: '[yellow]{description}[/yellow]' to your [blue]{list_name}[/blue] list."
     )
 
+
 def handle_focus(args):
     if args.is_global:
         path = get_global_list_path()
@@ -229,7 +257,6 @@ def handle_focus(args):
         console.print("No tasks in the current list. Create one by using `pydo add`.")
         return
 
-
     tasks_focused_count = 0
     tasks_unfocused_count = 0
     for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
@@ -242,7 +269,7 @@ def handle_focus(args):
         task = data["tasks"][task_id - 1]
 
         if task.get("focus") is not None:
-            if task["focus"] == True:
+            if task["focus"]:
                 task["focus"] = False
                 tasks_unfocused_count += 1
             else:
@@ -253,13 +280,18 @@ def handle_focus(args):
             tasks_focused_count += 1
 
         if tasks_focused_count > 0:
-            console.print(f"Added focus on [dim blue]{tasks_focused_count}[/dim blue] task{'s' if tasks_focused_count > 1 else ''}")
+            console.print(
+                f"Added focus on [dim blue]{tasks_focused_count}[/dim blue] task{'s' if tasks_focused_count > 1 else ''}"
+            )
 
         if tasks_unfocused_count > 0:
-            console.print(f"Removed focus from [dim red]{tasks_unfocused_count}[/dim red] task{'s' if tasks_unfocused_count > 1 else ''}")
+            console.print(
+                f"Removed focus from [dim red]{tasks_unfocused_count}[/dim red] task{'s' if tasks_unfocused_count > 1 else ''}"
+            )
 
         if tasks_focused_count > 0 or tasks_unfocused_count > 0:
             save_tasks(path, data)
+
 
 def handle_done(args):
     if args.is_global:
