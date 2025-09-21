@@ -9,6 +9,7 @@ from rich.table import Table
 from pydo import console
 from pydo.art import run_init_animation
 from pydo.models import PydoData, Task
+from pydo.gtasks_integration import GoogleTasksClient
 
 PYDO_DIR = ".pydo"
 PYDO_TASKS_FILENAME = "tasks.json"
@@ -88,8 +89,8 @@ def handle_init(args):
     if tasks_path.is_file():
         console.print(f"pydo already initialized in {CWD}")
         return
-    suggested_name = str(Path.cwd()) if not args.is_global else "Pydo Global List"
-    chosen_name = input(f"Pydo list name (default: {suggested_name}): ")
+    suggested_name = str(Path.cwd().name) if not args.is_global else "Pydo Global List"
+    chosen_name = input(f"Pydo list name (default: {suggested_name}): ").strip()
     if chosen_name == "":
         chosen_name = suggested_name
 
@@ -109,7 +110,6 @@ def handle_init(args):
     console.print(f"Creating tasks file at {tasks_path}...")
     initial_data = PydoData()
     initial_data.metadata.local_list_name = chosen_name
-    breakpoint()
     tasks_path.write_text(initial_data.model_dump_json(indent=2))
 
     console.print(f"🎉 Successfully initialized pydo list in {CWD}")
@@ -471,3 +471,37 @@ def handle_clear(args):
         console.print(
             f"[bold green]List cleared of {tasks_deleted_count} tasks. [/bold green]"
         )
+
+def handle_sync(args):
+    if args.is_global:
+        path = get_global_list_path()
+        if path is None:
+            console.log("No global list found.")
+            return
+    else:
+        path = find_local_list_path()
+        if path is None:
+            console.print(
+                "No local pydo list found. Use `pydo init` to create one in the current directory."
+            )
+            return
+    data = load_tasks(path)
+
+    if data.metadata.local_list_name == "":
+        print("Can't upload a list without a name.")
+        suggested_name = Path.cwd().name
+        new_name = input(f"Give name to current list before sync (Enter for default: {suggested_name})").strip()
+        data.metadata.local_list_name = suggested_name if new_name == "" else new_name
+    if data.metadata.google_tasks_list_id == "": # List not created yet on G Tasks => Create it now
+        gtasks_client = GoogleTasksClient()
+        try:
+            gtasks_client.authenticate()
+            gtasks_list_id = gtasks_client.create_list(data.metadata.local_list_name)
+            if gtasks_list_id:
+                print("Google Tasks List created!")
+                data.metadata.google_tasks_list_id = gtasks_list_id
+                save_tasks(path, data)
+        except Exception as e:
+            print(f"Error syncing with Google Tasks: {e}")
+    else:
+        print("List already has google tasks id") # TODO => OK FOR NOW, NEED TO ACTUALLY CHECK IF ID MAPS TO A GTASKS LIST

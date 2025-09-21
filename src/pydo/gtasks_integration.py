@@ -13,6 +13,8 @@ class NotAuthenticatedError(Exception):
 class ClientNotSynchronisedError(Exception):
     pass
 
+CREDENTIALS_PATH = "/home/alexv/Projects/pydo/src/pydo/credentials.json" # TODO: MOVE TO ENV AND RESEARCH HOW TO MANAGE THIS FOR DISTRIBUTION
+
 class GoogleTasksClient:
     SCOPES = ["https://www.googleapis.com/auth/tasks"]
 
@@ -36,7 +38,7 @@ class GoogleTasksClient:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file("credentials.json", self.SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, self.SCOPES)
                 creds = flow.run_local_server(port=0)
 
             # Save the credentials for the next run
@@ -65,17 +67,19 @@ class GoogleTasksClient:
         except Exception as e:
             print("Error while retreiving lists from Google Tasks: {e}")
 
-    def create_list(self, list_name: str):
+    def create_list(self, list_name: str) -> str | None:
         if not self._service:
             raise NotAuthenticatedError("Client not connected to the service. Authenticate and try again.")
 
         new_list = {"title": list_name}
         try:
-            response = self._service.tasklists.insert(body=new_list).execute()
+            response = self._service.tasklists().insert(body=new_list).execute() # TODO: Handle interpreting the response value
         except Exception as e:
-            print("Error while trying to create Google Tasks list.")
+            print(f"Error while trying to create Google Tasks list: {e}")
+            return None
         if response:
             print(f"List created successfully! Google Tasks List id: {response.get('id')}")
+            return response.get('id')
 
 
     def get_tasks(self, task_list_idx: int):

@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 class Metadata(BaseModel):
     local_list_name: str = ""
+    google_tasks_list_id: str = ""
     total_completed_tasks: int = 0
 
 class Task(BaseModel):

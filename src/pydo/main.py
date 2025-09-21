@@ -27,6 +27,11 @@ def run():
     )
     parser_init.set_defaults(func=handlers.handle_init)
 
+    parser_sync = subparsers.add_parser(
+        "sync", help="Synchronize list with google tasks"
+    )
+    parser_sync.set_defaults(func=handlers.handle_sync)
+
     # Command: status
     parser_status = subparsers.add_parser(
         "status", help="Show the currently active list (local or global)."
