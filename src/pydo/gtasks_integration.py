@@ -1,5 +1,6 @@
 from os import wait
 import os.path
+from pathlib import Path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -13,7 +14,11 @@ class NotAuthenticatedError(Exception):
 class ClientNotSynchronisedError(Exception):
     pass
 
-CREDENTIALS_PATH = "/home/alexv/Projects/pydo/src/pydo/credentials.json" # TODO: MOVE TO ENV AND RESEARCH HOW TO MANAGE THIS FOR DISTRIBUTION
+HOME = Path.home()
+PYDO_DATA_DIR = Path(".pydo_data")
+
+CREDENTIALS_PATH = HOME / PYDO_DATA_DIR / "credentials.json" # TODO: MOVE TO ENV AND RESEARCH HOW TO MANAGE THIS FOR DISTRIBUTION
+TOKEN_PATH = HOME / PYDO_DATA_DIR / "token.json"
 
 class GoogleTasksClient:
     SCOPES = ["https://www.googleapis.com/auth/tasks"]
@@ -30,8 +35,8 @@ class GoogleTasksClient:
         creds = None
         # The file token.json stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first time.
-        if os.path.exists("token.json"):
-            creds = Credentials.from_authorized_user_file("token.json", self.SCOPES)
+        if os.path.exists(TOKEN_PATH):
+            creds = Credentials.from_authorized_user_file(TOKEN_PATH, self.SCOPES)
 
         # If there are no (valid) credentials available, let the user log in.
         if not creds or not creds.valid:
@@ -42,7 +47,7 @@ class GoogleTasksClient:
                 creds = flow.run_local_server(port=0)
 
             # Save the credentials for the next run
-            with open("token.json", "w") as token:
+            with open(TOKEN_PATH, "w") as token:
                 token.write(creds.to_json())
         self._creds = creds
         self._service = build("tasks", "v1", credentials=self._creds)
