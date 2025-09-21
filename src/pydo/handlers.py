@@ -14,6 +14,7 @@ from pydo.art import run_init_animation
 TASKS_JSON_TEMPLATE = {
     "schema_version": 1,
     "metadata": {
+        "local_list_name": "",
         "total_completed_tasks": 0  # Since task field is called "completed", this one has to follow
     },
     "tasks": [],
@@ -98,6 +99,10 @@ def handle_init(args):
     if tasks_path.is_file():
         console.print(f"pydo already initialized in {CWD}")
         return
+    suggested_name = str(Path.cwd()) if not args.is_global else "Pydo Global List"
+    chosen_name = input(f"Pydo list name (default: {suggested_name}): ")
+    if chosen_name == "":
+        chosen_name = suggested_name
 
     run_init_animation()
 
