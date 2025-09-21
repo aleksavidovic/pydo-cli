@@ -15,10 +15,10 @@ class ClientNotSynchronisedError(Exception):
     pass
 
 HOME = Path.home()
-PYDO_DATA_DIR = Path(".pydo_data")
+PYDO_DATA_DIR = HOME / Path(".pydo_data")
 
-CREDENTIALS_PATH = HOME / PYDO_DATA_DIR / "credentials.json" # TODO: MOVE TO ENV AND RESEARCH HOW TO MANAGE THIS FOR DISTRIBUTION
-TOKEN_PATH = HOME / PYDO_DATA_DIR / "token.json"
+CREDENTIALS_PATH = PYDO_DATA_DIR / "credentials.json" # TODO: MOVE TO ENV AND RESEARCH HOW TO MANAGE THIS FOR DISTRIBUTION
+TOKEN_PATH = PYDO_DATA_DIR / "token.json"
 
 class GoogleTasksClient:
     SCOPES = ["https://www.googleapis.com/auth/tasks"]
@@ -33,6 +33,7 @@ class GoogleTasksClient:
     def authenticate(self):
         """Handles user authentication and token management."""
         creds = None
+        PYDO_DATA_DIR.mkdir(exist_ok=True)
         # The file token.json stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first time.
         if os.path.exists(TOKEN_PATH):

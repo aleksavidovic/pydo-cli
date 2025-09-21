@@ -4,12 +4,9 @@ import time
 import uuid
 from pathlib import Path
 
-from rich.table import Table
 
 from pydo import console
-from pydo.art import run_init_animation
 from pydo.models import PydoData, Task
-from pydo.gtasks_integration import GoogleTasksClient
 
 PYDO_DIR = ".pydo"
 PYDO_TASKS_FILENAME = "tasks.json"
@@ -48,6 +45,7 @@ def load_tasks(path: Path) -> PydoData:
 
 
 def print_tasks(tasks, total_completed, show_all=False, show_done=True, title=""):
+    from rich.table import Table
     caption = f"[normal]Total tasks done: [green]{total_completed}[/]"
     table = Table(
         title=title,
@@ -94,6 +92,7 @@ def handle_init(args):
     if chosen_name == "":
         chosen_name = suggested_name
 
+    from pydo.art import run_init_animation
     run_init_animation()
 
     console.print(f"Creating pydo directory at {CWD}...")
@@ -493,6 +492,7 @@ def handle_sync(args):
         new_name = input(f"Give name to current list before sync (Enter for default: {suggested_name})").strip()
         data.metadata.local_list_name = suggested_name if new_name == "" else new_name
     if data.metadata.google_tasks_list_id == "": # List not created yet on G Tasks => Create it now
+        from pydo.gtasks_integration import GoogleTasksClient
         gtasks_client = GoogleTasksClient()
         try:
             gtasks_client.authenticate()
