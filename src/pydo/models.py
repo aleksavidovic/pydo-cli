@@ -10,7 +10,7 @@ class Task(BaseModel):
     id: UUID
     description: str
     completed: bool = False
-    focused: bool | None = None
+    focus: bool | None = None
 
 class PydoData(BaseModel):
     schema_version: int = 1
