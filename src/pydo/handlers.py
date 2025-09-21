@@ -279,18 +279,18 @@ def handle_focus(args):
             task["focus"] = True
             tasks_focused_count += 1
 
-        if tasks_focused_count > 0:
-            console.print(
-                f"Added focus on [dim blue]{tasks_focused_count}[/dim blue] task{'s' if tasks_focused_count > 1 else ''}"
-            )
+    if tasks_focused_count > 0:
+        console.print(
+            f"Added focus on [dim blue]{tasks_focused_count}[/dim blue] task{'s' if tasks_focused_count > 1 else ''}"
+        )
 
-        if tasks_unfocused_count > 0:
-            console.print(
-                f"Removed focus from [dim red]{tasks_unfocused_count}[/dim red] task{'s' if tasks_unfocused_count > 1 else ''}"
-            )
+    if tasks_unfocused_count > 0:
+        console.print(
+            f"Removed focus from [dim red]{tasks_unfocused_count}[/dim red] task{'s' if tasks_unfocused_count > 1 else ''}"
+        )
 
-        if tasks_focused_count > 0 or tasks_unfocused_count > 0:
-            save_tasks(path, data)
+    if tasks_focused_count > 0 or tasks_unfocused_count > 0:
+        save_tasks(path, data)
 
 
 def handle_done(args):
