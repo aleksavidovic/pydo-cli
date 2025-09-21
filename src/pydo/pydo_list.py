@@ -1,7 +1,8 @@
-from pathlib import Path
-import uuid
 import json
-from pydo.models import PydoData, Task, Metadata
+import uuid
+from pathlib import Path
+
+from pydo.models import CURRENT_SCHEMA_VERSION, Metadata, PydoData, Task
 
 
 class PydoList:
@@ -13,7 +14,23 @@ class PydoList:
         if not self._path.exists():
             return PydoData()
         with self._path.open("r") as f:
-            return PydoData.model_validate(json.load(f))
+            raw_data = json.load(f)
+        schema_version = raw_data.get("schema_version", 1)
+        if schema_version < CURRENT_SCHEMA_VERSION:
+            raw_data = self._migrate(raw_data, from_version=schema_version)
+        pydo_data = PydoData.model_validate(raw_data)
+        self._save_data(pydo_data)
+
+        return pydo_data
+
+    def _migrate(self, data: dict, from_version=1) -> dict:
+        if from_version == 1:
+            data["schema_version"] = 2
+        return data
+
+    def _save_data(self, data: PydoData):
+        with self._path.open("w") as f:
+            f.write(data.model_dump_json())
 
     def _save(self):
         with self._path.open("w") as f:
@@ -48,7 +65,7 @@ class PydoList:
         skipped_count = 0
         for task_id in sorted(list(set(task_ids))):
             if 1 <= task_id <= len(self._data.tasks):
-                task = self._data.tasks[task_id-1]
+                task = self._data.tasks[task_id - 1]
                 if not task.completed:
                     task.completed = True
                     completed_count += 1
@@ -70,7 +87,7 @@ class PydoList:
         skipped_count = 0
         for task_id in sorted(list(set(task_ids))):
             if 1 <= task_id <= len(self._data.tasks):
-                task = self._data.tasks[task_id-1]
+                task = self._data.tasks[task_id - 1]
                 if task.completed:
                     task.completed = False
                     uncompleted_count += 1
@@ -85,14 +102,34 @@ class PydoList:
 
         return uncompleted_count, skipped_count
 
+    def hide_tasks(self, task_ids: list[int]) -> tuple[int, int]:
+        hidden_count = 0
+        skipped_count = 0
+        for task_id in sorted(list(set(task_ids))):
+            if 1 <= task_id <= len(self._data.tasks):
+                if not self._data.tasks[task_id - 1].hidden:
+                    self._data.tasks[task_id - 1].hidden = True
+                    hidden_count += 1
+                else:
+                    skipped_count += 1
+        if hidden_count > 0:
+            self._save()
+        return hidden_count, skipped_count
+
     def remove_tasks(self, task_ids: list[int]) -> tuple[int, int]:
         if len(self._data.tasks) == 0:
             return 0, 0
         removed_count = 0
         skipped_count = 0
         old_task_count = len(self._data.tasks)
-        ids_to_remove = [task_id-1 for task_id in sorted(list(set(task_ids))) if 1 <= task_id <= len(self._data.tasks)]
-        new_tasks = [task for i, task in enumerate(self._data.tasks) if i not in ids_to_remove]
+        ids_to_remove = [
+            task_id - 1
+            for task_id in sorted(list(set(task_ids)))
+            if 1 <= task_id <= len(self._data.tasks)
+        ]
+        new_tasks = [
+            task for i, task in enumerate(self._data.tasks) if i not in ids_to_remove
+        ]
         removed_count = old_task_count - len(new_tasks)
         if removed_count > 0:
             self._data.tasks = new_tasks

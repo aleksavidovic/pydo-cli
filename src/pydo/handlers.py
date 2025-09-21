@@ -1,13 +1,18 @@
-import json
 import os
-import time
-import uuid
 from pathlib import Path
 
 from pydo import console
-from pydo.models import PydoData, Task
+from pydo.models import PydoData
 from pydo.pydo_list import PydoList
-from pydo.views import render_add_success, render_clear_success, render_complete_success, render_remove_success, render_uncomplete_success, render_focus_success
+from pydo.views import (
+    render_add_success,
+    render_clear_success,
+    render_complete_success,
+    render_focus_success,
+    render_hide_success,
+    render_remove_success,
+    render_uncomplete_success,
+)
 
 PYDO_DIR = ".pydo"
 PYDO_TASKS_FILENAME = "tasks.json"
@@ -50,6 +55,8 @@ def print_tasks(tasks, total_completed, show_all=False, show_done=True, title=""
     table.add_column("Description")
 
     for id, task in enumerate(tasks, 1):
+        if task.hidden:
+            continue
         display_id = f"[green]{id}[/]" if task.completed else f"{id}"
         status = "[green]✅[/]" if task.completed else "[red]❌[/red]"
         desc_not_done_style = "yellow"
@@ -228,6 +235,17 @@ def handle_undone(args):
     render_uncomplete_success(uncompleted_count, skipped_count)
 
 
+def handle_hide(args):
+    path = get_global_list_path() if args.is_global else find_local_list_path()
+    if not path:
+        print("No list found")
+        return
+
+    pydo_list = PydoList(path)
+    hidden_count, skipped_count = pydo_list.hide_tasks(args.task_ids)
+    render_hide_success(hidden_count, skipped_count)
+
+
 def handle_edit(args):
     console.print("[bold red]Edit function not implemented yet.[/bold red]")
 
@@ -242,6 +260,7 @@ def handle_remove(args):
     removed_count, skipped_count = pydo_list.remove_tasks(args.task_ids)
     render_remove_success(removed_count, skipped_count)
 
+
 def handle_clear(args):
     path = get_global_list_path() if args.is_global else find_local_list_path()
     if not path:
@@ -252,49 +271,35 @@ def handle_clear(args):
     cleared_count = pydo_list.clear_completed_tasks()
     render_clear_success(cleared_count)
 
+
 def handle_sync(args):
-    if args.is_global:
-        path = get_global_list_path()
-        if path is None:
-            console.log("No global list found.")
-            return
-    else:
-        path = find_local_list_path()
-        if path is None:
-            console.print(
-                "No local pydo list found. Use `pydo init` to create one in the current directory."
-            )
-            return
-    data = load_tasks(path)
+    path = get_global_list_path() if args.is_global else find_local_list_path()
+    if not path:
+        print("No list found")
+        return
 
-    if data.metadata.local_list_name == "":
-        print("Can't upload a list without a name.")
-        suggested_name = Path.cwd().name
-        new_name = input(
-            f"Give name to current list before sync (Enter for default: {suggested_name})"
-        ).strip()
-        data.metadata.local_list_name = suggested_name if new_name == "" else new_name
-    if (
-        data.metadata.google_tasks_list_id == ""
-    ):  # List not created yet on G Tasks => Create it now
-        from pydo.gtasks_integration import GoogleTasksClient
+    from pydo.gtasks_integration import GoogleTasksClient
 
-        gtasks_client = GoogleTasksClient()
-        try:
-            gtasks_client.authenticate()
-            gtasks_list_id = gtasks_client.create_list(data.metadata.local_list_name)
+    pydo_list = PydoList(path)
+    gtasks_client = GoogleTasksClient()
+    try:
+        gtasks_client.authenticate()
+
+        if pydo_list.get_list_google_id() == "":
+            gtasks_list_id = gtasks_client.create_list(pydo_list.get_list_name())
+
             if gtasks_list_id:
                 print("Google Tasks List created!")
-                data.metadata.google_tasks_list_id = gtasks_list_id
-                tasks = [task.description for task in data.tasks]
-                for task in tasks:
-                    resp = gtasks_client.create_task(
-                        task_list_id=gtasks_list_id, task_title=task
-                    )
-                save_tasks(path, data)
-        except Exception as e:
-            print(f"Error syncing with Google Tasks: {e}")
-    else:
-        print(
-            "List already has google tasks id"
-        )  # TODO => OK FOR NOW, NEED TO ACTUALLY CHECK IF ID MAPS TO A GTASKS LIST
+                pydo_list.set_google_id(gtasks_list_id)
+                # Since new list is created in Google Tasks, tasks flow in one direction
+                # ONLY Pydo => GTasks
+                # BUT !!! GTasks API returns Task IDs
+                # I need to assign those IDs to pydo tasks
+                # BUT BUT !!!!!
+                # Let's see other cases and unify the sync mechanism if possible??
+            else:
+                raise Exception("Couldn't create new list")
+        else:  # pydo list has a google id (but is it valid?)
+            pass
+    except Exception as e:
+        print(f"Error syncing with Google Tasks: {e}")

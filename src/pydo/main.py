@@ -97,6 +97,17 @@ def run():
     )
     parser_done.set_defaults(func=handlers.handle_done)
 
+    # Command hide
+    parser_hide = subparsers.add_parser(
+        "hide", help="Mark task(s) as hidden.", aliases=["h"]
+    )
+    parser_hide.add_argument(
+        "task_ids",
+        nargs="+",
+        type=int,
+        help="The ID(s) of the task(s) to mark as done.",
+    )
+    parser_hide.set_defaults(func=handlers.handle_hide)
     # Command: undone
     parser_undone = subparsers.add_parser(
         "undone", aliases=["u"], help="Mark task(s) as not done."

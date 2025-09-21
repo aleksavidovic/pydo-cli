@@ -2,6 +2,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+CURRENT_SCHEMA_VERSION = 2
+
 
 class Metadata(BaseModel):
     local_list_name: str = ""
@@ -13,10 +15,11 @@ class Task(BaseModel):
     id: UUID
     description: str
     completed: bool = False
-    focus: bool | None = None
+    focus: bool | None = False
+    hidden: bool = False
 
 
 class PydoData(BaseModel):
-    schema_version: int = 1
+    schema_version: int = CURRENT_SCHEMA_VERSION
     metadata: Metadata = Metadata()
     tasks: list[Task] = []
