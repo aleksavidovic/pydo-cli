@@ -14,6 +14,6 @@ class Task(BaseModel):
 
 class PydoData(BaseModel):
     schema_version: int = 1
-    metadata: Metadata
+    metadata: Metadata = Metadata()
     tasks: list[Task] = []
 
