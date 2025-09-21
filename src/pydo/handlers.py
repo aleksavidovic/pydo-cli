@@ -6,6 +6,8 @@ from pathlib import Path
 
 from pydo import console
 from pydo.models import PydoData, Task
+from pydo.pydo_list import PydoList
+from pydo.views import render_add_success, render_clear_success, render_complete_success, render_remove_success, render_uncomplete_success, render_focus_success
 
 PYDO_DIR = ".pydo"
 PYDO_TASKS_FILENAME = "tasks.json"
@@ -29,19 +31,6 @@ def find_local_list_path():
 def get_global_list_path():
     global_list_path = Path.home() / PYDO_DIR / PYDO_TASKS_FILENAME
     return global_list_path if global_list_path.exists() else None
-
-
-# --- Helper Functions (Save / Load) ---
-def save_tasks(path: Path, data: PydoData):
-    with path.open("w") as f:
-        f.write(data.model_dump_json(indent=2))
-
-
-def load_tasks(path: Path) -> PydoData:
-    if not path.exists():
-        return PydoData()
-    with path.open("r") as f:
-        return PydoData.model_validate(json.load(f))
 
 
 def print_tasks(tasks, total_completed, show_all=False, show_done=True, title=""):
@@ -143,246 +132,100 @@ def handle_status(args):
 
 
 def handle_list(args):
-    if args.is_global:
-        path = get_global_list_path()
-        if path is None:
-            console.print("No global list found.")
-            console.print("Create one with [yellow]pydo --global init[/yellow]")
-            return
-        else:
-            data = load_tasks(path)
-            print_tasks(
-                data.tasks,
-                data.metadata.total_completed_tasks,
-                show_all=args.all,
-                show_done=args.done,
-                title=data.metadata.local_list_name,
-            )
-            return
+    """
+    Handler function for pydo `list` subcommand.
 
-    path = find_local_list_path()
-    if path is None:
-        console.print("No local list found.")
-        path = get_global_list_path()
-        if path is None:
-            console.print("No global list found.")
-            console.print(
-                "No local or global list found. Create a new list using [yellow]pydo [-g] init[/yellow]"
-            )
-            return
+    If not given any additional args, it finds the
+    nearest local .pydo directory with tasks.json
+    file and prints them to the screen.
 
-    data = load_tasks(path)
+    Options are used for filtering tasks.
+
+    A pygo -g / --global flag will make it look for a
+    pydo list in the home directory
+    """
+    path = get_global_list_path() if args.is_global else find_local_list_path()
+    if not path:
+        print("No list found.")
+        return
+
+    pydo_list = PydoList(path)
+    tasks = pydo_list.get_tasks()
+    tasks_md = pydo_list.get_metadata()
+
     print_tasks(
-        data.tasks,
-        data.metadata.total_completed_tasks,
+        tasks,
+        tasks_md.total_completed_tasks,
         show_all=args.all,
         show_done=args.done,
-        title=data.metadata.local_list_name,
+        title=tasks_md.local_list_name,
     )
 
 
 def handle_clearlist(args):
+    """
+    Clears the screen by sending an appropriate command
+    directly to the system, according to the underlying OS.
+    Then it calls handle_list and passes on the args.
+
+    Used for better UX, so that a user gets a list
+    printed on a clean screen without clutter and noise
+    of previous terminal output
+    """
     os.system("cls" if os.name == "nt" else "clear")
     handle_list(args)
 
 
 def handle_add(args):
-    if args.is_global:
-        path = get_global_list_path()
-        if path is None:
-            console.log("No global list found.")
-            return
-        list_name = "global"
-    else:
-        path = find_local_list_path()
-        if path is None:
-            console.log("No local list found.")
-            return
-        list_name = "local"
-
-    try:
-        data = load_tasks(path)
-    except FileNotFoundError:
-        console.print(
-            f"Task creation failed. Are you sure pydo is initialized here ({path})?"
-        )
+    path = get_global_list_path() if args.is_global else find_local_list_path()
+    if not path:
+        print("No list found")
         return
+
     description = " ".join(args.description)
-    new_task = Task(id=uuid.uuid4(), description=description, completed=False)
-    data.tasks.append(new_task)
-    save_tasks(path, data)
-    console.print(
-        f"✅ Added: '[yellow]{description}[/yellow]' to your [blue]{list_name}[/blue] list."
-    )
+    pydo_list = PydoList(path)
+    new_task = pydo_list.add_task(description)
+    list_name = pydo_list.get_list_name()
+    render_add_success(new_task, list_name)
 
 
 def handle_focus(args):
-    if args.is_global:
-        path = get_global_list_path()
-        if path is None:
-            console.log("No global list found.")
-            return
-    else:
-        path = find_local_list_path()
-        if path is None:
-            console.print(
-                "No local pydo list found. Use `pydo init` to create one in the current directory."
-            )
-            return
+    """
+    Toggles focus field on task(s) for given ids.
 
-    data = load_tasks(path)
-    if len(data.tasks) == 0:
-        console.print("No tasks in the current list. Create one by using `pydo add`.")
+    Focus is a local, aesthetic function, so toggle is ok.
+    """
+    path = get_global_list_path() if args.is_global else find_local_list_path()
+    if not path:
+        print("No list found")
         return
 
-    tasks_focused_count = 0
-    tasks_unfocused_count = 0
-    for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
-        if (task_id - 1) < 0 or task_id > len(data.tasks):
-            console.print(
-                f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping."
-            )
-            continue
+    pydo_list = PydoList(path)
+    focus_on_count, focus_off_count = pydo_list.toggle_focus(args.task_ids)
 
-        task = data.tasks[task_id - 1]
-
-        if task.focus is not None:
-            if task.focus:
-                task.focus = False
-                tasks_unfocused_count += 1
-            else:
-                task.focus = True
-                tasks_focused_count += 1
-        else:
-            task.focus = True
-            tasks_focused_count += 1
-
-    if tasks_focused_count > 0:
-        console.print(
-            f"Added focus on [dim blue]{tasks_focused_count}[/dim blue] task{'s' if tasks_focused_count > 1 else ''}"
-        )
-
-    if tasks_unfocused_count > 0:
-        console.print(
-            f"Removed focus from [dim red]{tasks_unfocused_count}[/dim red] task{'s' if tasks_unfocused_count > 1 else ''}"
-        )
-
-    if tasks_focused_count > 0 or tasks_unfocused_count > 0:
-        save_tasks(path, data)
+    render_focus_success(focus_on_count, focus_off_count)
 
 
 def handle_done(args):
-    if args.is_global:
-        path = get_global_list_path()
-        if path is None:
-            console.log("No global list found.")
-            return
-    else:
-        path = find_local_list_path()
-        if path is None:
-            console.print(
-                "No local pydo list found. Use `pydo init` to create one in the current directory."
-            )
-            return
-
-    data = load_tasks(path)
-    if len(data.tasks) == 0:
-        console.print("No tasks in the current list. Create one by using `pydo add`.")
+    path = get_global_list_path() if args.is_global else find_local_list_path()
+    if not path:
+        print("No list found")
         return
 
-    tasks_completed_count = 0
-
-    for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
-        if (task_id - 1) < 0 or task_id > len(data.tasks):
-            console.print(
-                f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping."
-            )
-            continue
-
-        task = data.tasks[task_id - 1]
-
-        if task.completed:
-            console.print(
-                f"Task {task_id}: '[yellow]{task.description}[/yellow]' is already done."
-            )
-            continue
-
-        with console.status(
-            f"[bold green]Completing task {task_id}...", spinner="dots"
-        ):
-            # This sleep makes the animation feel more deliberate
-            time.sleep(0.7)
-            task.completed = True
-            tasks_completed_count += 1
-
-        console.print(f"✅[strike dim green]{task.description}[/strike dim green]")
-
-    # 3. Save the data back to the file if changes were made
-    if tasks_completed_count > 0:
-        data.metadata.total_completed_tasks += tasks_completed_count
-        save_tasks(path, data)
-        if tasks_completed_count > 1:
-            console.print(
-                f"\n[bold green]Nice work! You've completed {tasks_completed_count} tasks. 🎉[/bold green]"
-            )
-        else:
-            console.print("[bold green]Nice work! 🎉[/bold green]")
+    pydo_list = PydoList(path)
+    completed_count, skipped_count = pydo_list.complete_tasks(args.task_ids)
+    render_complete_success(completed_count, skipped_count)
 
 
 def handle_undone(args):
-    if args.is_global:
-        path = get_global_list_path()
-        if path is None:
-            console.log("No global list found.")
-            return
-    else:
-        path = find_local_list_path()
-        if path is None:
-            console.print(
-                "No local pydo list found. Use `pydo init` to create one in the current directory."
-            )
-            return
-    data = load_tasks(path)
-    if len(data.tasks) == 0:
-        console.print("No tasks in the current list. Create one by using `pydo add`.")
+    path = get_global_list_path() if args.is_global else find_local_list_path()
+    if not path:
+        print("No list found")
         return
 
-    tasks_uncompleted_count = 0
-    for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
-        if (task_id - 1) < 0 or task_id > len(data.tasks):
-            console.print(
-                f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping."
-            )
-            continue
-
-        task = data.tasks[task_id - 1]
-
-        if not task.completed:
-            console.print(
-                f"Task {task_id}: '[yellow]{task.description}[/yellow]' is already not completed."
-            )
-            continue
-
-        with console.status(
-            f"[bold yellow]Reverting task status {task_id}...", spinner="dots"
-        ):
-            # This sleep makes the animation feel more deliberate
-            time.sleep(0.7)
-            task.completed = False
-            tasks_uncompleted_count += 1
-
-        console.print(f"[strike dim yellow]{task.description}[/strike dim yellow]")
-        # 3. Save file and report progress
-
-    if tasks_uncompleted_count > 0:
-        data.metadata.total_completed_tasks -= tasks_uncompleted_count
-        save_tasks(path, data)
-        if tasks_uncompleted_count > 1:
-            console.print(
-                f"\n[bold yellow]You've changed {tasks_uncompleted_count} tasks back to not complete. Go get them! [/bold yellow]"
-            )
-        else:
-            console.print("[bold green]Task back in todo. Go get it![/bold green]")
+    pydo_list = PydoList(path)
+    uncompleted_count, skipped_count = pydo_list.uncomplete_tasks(args.task_ids)
+    render_uncomplete_success(uncompleted_count, skipped_count)
 
 
 def handle_edit(args):
@@ -390,89 +233,24 @@ def handle_edit(args):
 
 
 def handle_remove(args):
-    if args.is_global:
-        path = get_global_list_path()
-        if path is None:
-            console.log("No global list found.")
-            return
-    else:
-        path = find_local_list_path()
-        if path is None:
-            console.print(
-                "No local pydo list found. Use `pydo init` to create one in the current directory."
-            )
-            return
-    data = load_tasks(path)
-    if len(data.tasks) == 0:
-        console.print("No tasks in the current list. Create one by using `pydo add`.")
+    path = get_global_list_path() if args.is_global else find_local_list_path()
+    if not path:
+        print("No list found")
         return
 
-    tasks_deleted_count = 0
-    for task_id in sorted(list(set(args.task_ids))):  # Sort and de-duplicate IDs
-        if (task_id - 1) < 0 or task_id > len(data.tasks):
-            console.print(
-                f"[bold red]Error:[/] Task ID {task_id} is invalid. Skipping."
-            )
-            continue
-
-        with console.status(
-            f"[bold yellow]Removing task [strike dim green]{task_id}[/]...",
-            spinner="dots",
-        ):
-            # This sleep makes the animation feel more deliberate
-            time.sleep(0.7)
-
-            del data.tasks[task_id - 1]
-            tasks_deleted_count += 1
-
-    if tasks_deleted_count > 0:
-        save_tasks(path, data)
-        if tasks_deleted_count > 1:
-            console.print(
-                f"\n[bold yellow]You've deleted {tasks_deleted_count} tasks. [/bold yellow]"
-            )
-        else:
-            console.print("[bold green]Task deleted.[/bold green]")
-
+    pydo_list = PydoList(path)
+    removed_count, skipped_count = pydo_list.remove_tasks(args.task_ids)
+    render_remove_success(removed_count, skipped_count)
 
 def handle_clear(args):
-    if args.is_global:
-        path = get_global_list_path()
-        if path is None:
-            console.log("No global list found.")
-            return
-    else:
-        path = find_local_list_path()
-        if path is None:
-            console.print(
-                "No local pydo list found. Use `pydo init` to create one in the current directory."
-            )
-            return
-    data = load_tasks(path)
-    if len(data.tasks) == 0:
-        console.print("No tasks in the current list. Create one by using `pydo add`.")
+    path = get_global_list_path() if args.is_global else find_local_list_path()
+    if not path:
+        print("No list found")
         return
 
-    tasks_deleted_count = 0
-    new_tasks = []
-    for task in data.tasks:
-        with console.status(
-            f"[bold green]Clearing task {task.description}...", spinner="dots"
-        ):
-            time.sleep(0.7)
-
-        if not task.completed:
-            new_tasks.append(task)
-        else:
-            tasks_deleted_count += 1
-
-    if tasks_deleted_count > 0:
-        data.tasks = new_tasks
-        save_tasks(path, data)
-        console.print(
-            f"[bold green]List cleared of {tasks_deleted_count} tasks. [/bold green]"
-        )
-
+    pydo_list = PydoList(path)
+    cleared_count = pydo_list.clear_completed_tasks()
+    render_clear_success(cleared_count)
 
 def handle_sync(args):
     if args.is_global:
