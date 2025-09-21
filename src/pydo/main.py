@@ -34,12 +34,14 @@ def run():
 
     # Command: status
     parser_status = subparsers.add_parser(
-        "status", help="Show the currently active list (local or global)."
+        "status",
+        help="Show the currently active list (local or global).",
+        aliases=["st"],
     )
     parser_status.set_defaults(func=handlers.handle_status)
 
     # Command: list / ls
-    parser_list = subparsers.add_parser("list", help="List tasks.", aliases=["ls"])
+    parser_list = subparsers.add_parser("list", help="List tasks.", aliases=["ls", "l"])
     parser_list.add_argument(
         "-a",
         "--all",
@@ -52,7 +54,9 @@ def run():
     parser_list.set_defaults(func=handlers.handle_list)
 
     # Command cls
-    parser_clearlist = subparsers.add_parser("cls", help="Clear screen and list tasks.")
+    parser_clearlist = subparsers.add_parser(
+        "cls", help="Clear screen and list tasks.", aliases=["c"]
+    )
     parser_clearlist.add_argument(
         "-a",
         "--all",
@@ -65,22 +69,26 @@ def run():
     parser_clearlist.set_defaults(func=handlers.handle_clearlist)
 
     # Command: add
-    parser_add = subparsers.add_parser("add", help="Add a new task.")
+    parser_add = subparsers.add_parser("add", aliases=["a"], help="Add a new task.")
     parser_add.add_argument(
         "description", nargs="+", help="The description of the task."
     )
     parser_add.set_defaults(func=handlers.handle_add)
 
-    parser_done = subparsers.add_parser("focus", help="Toggle focus on task(s)")
-    parser_done.add_argument(
+    parser_focus = subparsers.add_parser(
+        "focus", aliases=["f"], help="Toggle focus on task(s)"
+    )
+    parser_focus.add_argument(
         "task_ids",
         nargs="+",
         type=int,
         help="The ID(s) of the task(s) to add focus to.",
     )
-    parser_done.set_defaults(func=handlers.handle_focus)
+    parser_focus.set_defaults(func=handlers.handle_focus)
     # Command: done
-    parser_done = subparsers.add_parser("done", help="Mark task(s) as done.")
+    parser_done = subparsers.add_parser(
+        "done", help="Mark task(s) as done.", aliases=["d"]
+    )
     parser_done.add_argument(
         "task_ids",
         nargs="+",
@@ -90,7 +98,9 @@ def run():
     parser_done.set_defaults(func=handlers.handle_done)
 
     # Command: undone
-    parser_undone = subparsers.add_parser("undone", help="Mark task(s) as not done.")
+    parser_undone = subparsers.add_parser(
+        "undone", aliases=["u"], help="Mark task(s) as not done."
+    )
     parser_undone.add_argument(
         "task_ids",
         nargs="+",
@@ -100,7 +110,7 @@ def run():
     parser_undone.set_defaults(func=handlers.handle_undone)
 
     # Command: edit
-    parser_edit = subparsers.add_parser("edit", help="Edit a task.")
+    parser_edit = subparsers.add_parser("edit", help="Edit a task.", aliases=["e"])
     parser_edit.add_argument("task_id", type=int, help="The ID of the task to edit.")
     parser_edit.add_argument(
         "new_description", nargs="+", help="The new description for the task."

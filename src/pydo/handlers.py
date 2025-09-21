@@ -4,7 +4,6 @@ import time
 import uuid
 from pathlib import Path
 
-
 from pydo import console
 from pydo.models import PydoData, Task
 
@@ -37,6 +36,7 @@ def save_tasks(path: Path, data: PydoData):
     with path.open("w") as f:
         f.write(data.model_dump_json(indent=2))
 
+
 def load_tasks(path: Path) -> PydoData:
     if not path.exists():
         return PydoData()
@@ -46,6 +46,7 @@ def load_tasks(path: Path) -> PydoData:
 
 def print_tasks(tasks, total_completed, show_all=False, show_done=True, title=""):
     from rich.table import Table
+
     caption = f"[normal]Total tasks done: [green]{total_completed}[/]"
     table = Table(
         title=title,
@@ -93,6 +94,7 @@ def handle_init(args):
         chosen_name = suggested_name
 
     from pydo.art import run_init_animation
+
     run_init_animation()
 
     console.print(f"Creating pydo directory at {CWD}...")
@@ -471,6 +473,7 @@ def handle_clear(args):
             f"[bold green]List cleared of {tasks_deleted_count} tasks. [/bold green]"
         )
 
+
 def handle_sync(args):
     if args.is_global:
         path = get_global_list_path()
@@ -489,10 +492,15 @@ def handle_sync(args):
     if data.metadata.local_list_name == "":
         print("Can't upload a list without a name.")
         suggested_name = Path.cwd().name
-        new_name = input(f"Give name to current list before sync (Enter for default: {suggested_name})").strip()
+        new_name = input(
+            f"Give name to current list before sync (Enter for default: {suggested_name})"
+        ).strip()
         data.metadata.local_list_name = suggested_name if new_name == "" else new_name
-    if data.metadata.google_tasks_list_id == "": # List not created yet on G Tasks => Create it now
+    if (
+        data.metadata.google_tasks_list_id == ""
+    ):  # List not created yet on G Tasks => Create it now
         from pydo.gtasks_integration import GoogleTasksClient
+
         gtasks_client = GoogleTasksClient()
         try:
             gtasks_client.authenticate()
@@ -502,9 +510,13 @@ def handle_sync(args):
                 data.metadata.google_tasks_list_id = gtasks_list_id
                 tasks = [task.description for task in data.tasks]
                 for task in tasks:
-                    resp = gtasks_client.create_task(task_list_id=gtasks_list_id, task_title=task)
+                    resp = gtasks_client.create_task(
+                        task_list_id=gtasks_list_id, task_title=task
+                    )
                 save_tasks(path, data)
         except Exception as e:
             print(f"Error syncing with Google Tasks: {e}")
     else:
-        print("List already has google tasks id") # TODO => OK FOR NOW, NEED TO ACTUALLY CHECK IF ID MAPS TO A GTASKS LIST
+        print(
+            "List already has google tasks id"
+        )  # TODO => OK FOR NOW, NEED TO ACTUALLY CHECK IF ID MAPS TO A GTASKS LIST

@@ -1,4 +1,5 @@
 """An example of a a simple integration with Google Tasks using OAuth flow"""
+
 import argparse
 import os.path
 

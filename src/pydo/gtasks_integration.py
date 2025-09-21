@@ -1,4 +1,3 @@
-from os import wait
 import os.path
 from pathlib import Path
 
@@ -8,17 +7,23 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+
 class NotAuthenticatedError(Exception):
     pass
+
 
 class ClientNotSynchronisedError(Exception):
     pass
 
+
 HOME = Path.home()
 PYDO_DATA_DIR = HOME / Path(".pydo_data")
 
-CREDENTIALS_PATH = PYDO_DATA_DIR / "credentials.json" # TODO: MOVE TO ENV AND RESEARCH HOW TO MANAGE THIS FOR DISTRIBUTION
+CREDENTIALS_PATH = (
+    PYDO_DATA_DIR / "credentials.json"
+)  # TODO: MOVE TO ENV AND RESEARCH HOW TO MANAGE THIS FOR DISTRIBUTION
 TOKEN_PATH = PYDO_DATA_DIR / "token.json"
+
 
 class GoogleTasksClient:
     SCOPES = ["https://www.googleapis.com/auth/tasks"]
@@ -44,7 +49,9 @@ class GoogleTasksClient:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, self.SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    CREDENTIALS_PATH, self.SCOPES
+                )
                 creds = flow.run_local_server(port=0)
 
             # Save the credentials for the next run
@@ -69,31 +76,43 @@ class GoogleTasksClient:
             self._is_synced = True
             print("Retreived lists: ")
             for idx, task_list in enumerate(self._task_lists):
-                print(f" {idx+1} - {task_list['title']}")
-        except Exception as e:
+                print(f" {idx + 1} - {task_list['title']}")
+        except Exception:
             print("Error while retreiving lists from Google Tasks: {e}")
 
     def create_list(self, list_name: str) -> str | None:
         if not self._service:
-            raise NotAuthenticatedError("Client not connected to the service. Authenticate and try again.")
+            raise NotAuthenticatedError(
+                "Client not connected to the service. Authenticate and try again."
+            )
 
         new_list = {"title": list_name}
         try:
-            response = self._service.tasklists().insert(body=new_list).execute() # TODO: Handle interpreting the response value
+            response = (
+                self._service.tasklists().insert(body=new_list).execute()
+            )  # TODO: Handle interpreting the response value
         except Exception as e:
             print(f"Error while trying to create Google Tasks list: {e}")
             return None
         if response:
-            print(f"List created successfully! Google Tasks List id: {response.get('id')}")
-            return response.get('id')
+            print(
+                f"List created successfully! Google Tasks List id: {response.get('id')}"
+            )
+            return response.get("id")
 
     def create_task(self, task_list_id: str, task_title: str) -> str | None:
         if not self._service:
-            raise NotAuthenticatedError("Client not connected to the service. Authenticate and try again.")
+            raise NotAuthenticatedError(
+                "Client not connected to the service. Authenticate and try again."
+            )
 
         new_task = {"title": task_title}
         try:
-            resp = self._service.tasks().insert(tasklist=task_list_id, body=new_task).execute()
+            resp = (
+                self._service.tasks()
+                .insert(tasklist=task_list_id, body=new_task)
+                .execute()
+            )
         except Exception as e:
             print(f"Error while creating task: {e}")
             return None
@@ -103,20 +122,30 @@ class GoogleTasksClient:
     def get_tasks(self, task_list_idx: int):
         """Prints the user's tasks from the primary task list."""
         if not self._service:
-            raise NotAuthenticatedError("Client not connected to the service. Authenticate and try again.")
+            raise NotAuthenticatedError(
+                "Client not connected to the service. Authenticate and try again."
+            )
         if not self._is_synced:
-            raise ClientNotSynchronisedError("Client not synchronised with Google Tasks. Synchronise to obtain task lists and tasks.")
-        if type(task_list_idx) is not int or task_list_idx < 1 or task_list_idx > len(self._task_lists):
+            raise ClientNotSynchronisedError(
+                "Client not synchronised with Google Tasks. Synchronise to obtain task lists and tasks."
+            )
+        if (
+            type(task_list_idx) is not int
+            or task_list_idx < 1
+            or task_list_idx > len(self._task_lists)
+        ):
             raise KeyError("Invalid list number provided")
 
-        task_list_id = self._task_lists[task_list_idx-1].get("id")
+        task_list_id = self._task_lists[task_list_idx - 1].get("id")
         if not task_list_id:
             raise KeyError("List doesn't have Google API id.")
 
         try:
             # Call the Tasks API
             results = (
-                self._service.tasks().list(tasklist=task_list_id, showCompleted=False).execute()
+                self._service.tasks()
+                .list(tasklist=task_list_id, showCompleted=False)
+                .execute()
             )
             items = results.get("items", [])
 
@@ -133,4 +162,3 @@ class GoogleTasksClient:
 
         except HttpError as err:
             print(f"An error occurred: {err}")
-
