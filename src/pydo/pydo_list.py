@@ -28,6 +28,13 @@ class PydoList:
     def get_list_name(self) -> str:
         return self._data.metadata.local_list_name
 
+    def get_list_google_id(self) -> str:
+        return self._data.metadata.google_tasks_list_id
+
+    def set_list_google_id(self, google_id: str):
+        self._data.metadata.google_tasks_list_id = google_id
+        self._save()
+
     def add_task(self, description: str) -> Task:
         new_task = Task(id=uuid.uuid4(), description=description)
         self._data.tasks.append(new_task)
