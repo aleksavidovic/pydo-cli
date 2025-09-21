@@ -87,6 +87,18 @@ class GoogleTasksClient:
             print(f"List created successfully! Google Tasks List id: {response.get('id')}")
             return response.get('id')
 
+    def create_task(self, task_list_id: str, task_title: str) -> str | None:
+        if not self._service:
+            raise NotAuthenticatedError("Client not connected to the service. Authenticate and try again.")
+
+        new_task = {"title": task_title}
+        try:
+            resp = self._service.tasks().insert(tasklist=task_list_id, body=new_task).execute()
+        except Exception as e:
+            print(f"Error while creating task: {e}")
+            return None
+
+        return resp
 
     def get_tasks(self, task_list_idx: int):
         """Prints the user's tasks from the primary task list."""

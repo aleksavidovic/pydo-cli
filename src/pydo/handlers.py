@@ -500,6 +500,9 @@ def handle_sync(args):
             if gtasks_list_id:
                 print("Google Tasks List created!")
                 data.metadata.google_tasks_list_id = gtasks_list_id
+                tasks = [task.description for task in data.tasks]
+                for task in tasks:
+                    resp = gtasks_client.create_task(task_list_id=gtasks_list_id, task_title=task)
                 save_tasks(path, data)
         except Exception as e:
             print(f"Error syncing with Google Tasks: {e}")
