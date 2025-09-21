@@ -1,3 +1,4 @@
+from os import wait
 import os.path
 
 from google.auth.transport.requests import Request
@@ -6,6 +7,11 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+class NotAuthenticatedError(Exception):
+    pass
+
+class ClientNotSynchronisedError(Exception):
+    pass
 
 class GoogleTasksClient:
     SCOPES = ["https://www.googleapis.com/auth/tasks"]
@@ -13,6 +19,8 @@ class GoogleTasksClient:
     def __init__(self):
         self._creds = None
         self._service = None
+        self._is_synced: bool = False
+        self._task_lists = []
         self.tasks = None
 
     def authenticate(self):
@@ -50,19 +58,43 @@ class GoogleTasksClient:
                 print("No task list found on Google Tasks.")
 
             self._task_lists = task_lists
+            self._is_synced = True
             print("Retreived lists: ")
-            for task_list in self._task_lists:
-                print(f" - {task_list['title']}")
+            for idx, task_list in enumerate(self._task_lists):
+                print(f" {idx+1} - {task_list['title']}")
         except Exception as e:
             print("Error while retreiving lists from Google Tasks: {e}")
 
+    def create_list(self, list_name: str):
+        if not self._service:
+            raise NotAuthenticatedError("Client not connected to the service. Authenticate and try again.")
 
-    def get_tasks(self, service):
+        new_list = {"title": list_name}
+        try:
+            response = self._service.tasklists.insert(body=new_list).execute()
+        except Exception as e:
+            print("Error while trying to create Google Tasks list.")
+        if response:
+            print(f"List created successfully! Google Tasks List id: {response.get('id')}")
+
+
+    def get_tasks(self, task_list_idx: int):
         """Prints the user's tasks from the primary task list."""
+        if not self._service:
+            raise NotAuthenticatedError("Client not connected to the service. Authenticate and try again.")
+        if not self._is_synced:
+            raise ClientNotSynchronisedError("Client not synchronised with Google Tasks. Synchronise to obtain task lists and tasks.")
+        if type(task_list_idx) is not int or task_list_idx < 1 or task_list_idx > len(self._task_lists):
+            raise KeyError("Invalid list number provided")
+
+        task_list_id = self._task_lists[task_list_idx-1].get("id")
+        if not task_list_id:
+            raise KeyError("List doesn't have Google API id.")
+
         try:
             # Call the Tasks API
             results = (
-                service.tasks().list(tasklist="@default", showCompleted=False).execute()
+                self._service.tasks().list(tasklist=task_list_id, showCompleted=False).execute()
             )
             items = results.get("items", [])
 
