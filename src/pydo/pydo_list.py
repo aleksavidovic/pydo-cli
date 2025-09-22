@@ -116,6 +116,20 @@ class PydoList:
             self._save()
         return hidden_count, skipped_count
 
+    def unhide_tasks(self, task_ids: list[int]) -> tuple[int, int]:
+        unhidden_count = 0
+        skipped_count = 0
+        for task_id in sorted(list(set(task_ids))):
+            if 1 <= task_id <= len(self._data.tasks):
+                if self._data.tasks[task_id - 1].hidden:
+                    self._data.tasks[task_id - 1].hidden = False
+                    unhidden_count += 1
+                else:
+                    skipped_count += 1
+        if unhidden_count > 0:
+            self._save()
+        return unhidden_count, skipped_count
+
     def remove_tasks(self, task_ids: list[int]) -> tuple[int, int]:
         if len(self._data.tasks) == 0:
             return 0, 0

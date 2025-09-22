@@ -68,13 +68,25 @@ def render_hide_success(hidden_count: int, skipped_count: int):
         return
     if skipped_count > 0:
         console.print(
-            f"Skipped [bold red]{skipped_count}[/] tasks (invalid id / already pending)."
+            f"Skipped [bold red]{skipped_count}[/] tasks (invalid id / already hidden)."
         )
     if hidden_count > 0:
         console.print(
-            f"[bold yellow]Removed {hidden_count} task{'s' if hidden_count > 1 else ''}. [/]"
+            f"[bold yellow]Hidden {hidden_count} task{'s' if hidden_count > 1 else ''}. [/]"
         )
 
+def render_unhide_success(unhidden_count: int, skipped_count: int):
+    if skipped_count == 0 and unhidden_count == 0:
+        console.print("[dim]No tasks affected[/]")
+        return
+    if skipped_count > 0:
+        console.print(
+            f"Skipped [bold red]{skipped_count}[/] tasks (invalid id / not hidden)."
+        )
+    if unhidden_count > 0:
+        console.print(
+            f"[bold yellow]Unhide {unhidden_count} task{'s' if unhidden_count > 1 else ''}. [/]"
+        )
 
 def render_clear_success(cleared_count: int):
     if cleared_count == 0:

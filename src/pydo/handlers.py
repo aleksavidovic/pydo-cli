@@ -10,6 +10,7 @@ from pydo.views import (
     render_complete_success,
     render_focus_success,
     render_hide_success,
+    render_unhide_success,
     render_remove_success,
     render_uncomplete_success,
 )
@@ -244,6 +245,17 @@ def handle_hide(args):
     pydo_list = PydoList(path)
     hidden_count, skipped_count = pydo_list.hide_tasks(args.task_ids)
     render_hide_success(hidden_count, skipped_count)
+
+
+def handle_unhide(args):
+    path = get_global_list_path() if args.is_global else find_local_list_path()
+    if not path:
+        print("No list found")
+        return
+
+    pydo_list = PydoList(path)
+    unhidden_count, skipped_count = pydo_list.unhide_tasks(args.task_ids)
+    render_unhide_success(unhidden_count, skipped_count)
 
 
 def handle_edit(args):
