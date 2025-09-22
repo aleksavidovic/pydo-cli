@@ -10,9 +10,9 @@ from pydo.views import (
     render_complete_success,
     render_focus_success,
     render_hide_success,
-    render_unhide_success,
     render_remove_success,
     render_uncomplete_success,
+    render_unhide_success,
 )
 
 PYDO_DIR = ".pydo"

@@ -75,6 +75,7 @@ def render_hide_success(hidden_count: int, skipped_count: int):
             f"[bold yellow]Hidden {hidden_count} task{'s' if hidden_count > 1 else ''}. [/]"
         )
 
+
 def render_unhide_success(unhidden_count: int, skipped_count: int):
     if skipped_count == 0 and unhidden_count == 0:
         console.print("[dim]No tasks affected[/]")
@@ -87,6 +88,7 @@ def render_unhide_success(unhidden_count: int, skipped_count: int):
         console.print(
             f"[bold yellow]Unhide {unhidden_count} task{'s' if unhidden_count > 1 else ''}. [/]"
         )
+
 
 def render_clear_success(cleared_count: int):
     if cleared_count == 0:

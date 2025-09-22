@@ -1,6 +1,7 @@
-import json
 import uuid
 from pathlib import Path
+
+import orjson as json
 
 from pydo.models import CURRENT_SCHEMA_VERSION, Metadata, PydoData, Task
 
@@ -14,7 +15,7 @@ class PydoList:
         if not self._path.exists():
             return PydoData()
         with self._path.open("r") as f:
-            raw_data = json.load(f)
+            raw_data = json.loads(f.read())
         schema_version = raw_data.get("schema_version", 1)
         if schema_version < CURRENT_SCHEMA_VERSION:
             raw_data = self._migrate(raw_data, from_version=schema_version)
