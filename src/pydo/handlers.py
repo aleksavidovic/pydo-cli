@@ -190,7 +190,7 @@ def handle_add(args):
         print("No list found")
         return
 
-    description = " ".join(args.description)
+    description = " ".join(args.description).strip()
     pydo_list = PydoList(path)
     new_task = pydo_list.add_task(description)
     list_name = pydo_list.get_list_name()
