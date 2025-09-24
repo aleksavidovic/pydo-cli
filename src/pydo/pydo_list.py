@@ -40,6 +40,10 @@ class PydoList:
     def get_tasks(self, show_completed=True) -> list[Task]:
         return self._data.tasks
 
+    def get_focused_tasks(self) -> list[Task]:
+        focused_tasks = [task for task in self._data.tasks if task.focus and not task.completed]
+        return focused_tasks
+
     def get_metadata(self) -> Metadata:
         return self._data.metadata
 

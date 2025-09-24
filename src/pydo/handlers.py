@@ -158,7 +158,10 @@ def handle_list(args):
         return
 
     pydo_list = PydoList(path)
-    tasks = pydo_list.get_tasks()
+    if args.focus:
+        tasks = pydo_list.get_focused_tasks()
+    else:
+        tasks = pydo_list.get_tasks()
     tasks_md = pydo_list.get_metadata()
 
     print_tasks(
